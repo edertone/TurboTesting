@@ -1,0 +1,28 @@
+{
+  "name": "turbotesting-node",
+  "version": "0.0.1",
+  "description": "General purpose cross-language library to improve automated testing productivity",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/edertone/TurboTesting"
+  },
+  "dependencies": {
+    "turbocommons-ts": "^1.1.0"
+  },
+  "keywords": [
+    "automated",
+    "testing",
+    "library"
+  ],
+  "author": "edertone",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/edertone/TurboTesting/issues"
+  },
+  "homepage": "https://turboframework.org"
+}

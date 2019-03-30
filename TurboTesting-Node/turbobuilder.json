@@ -1,0 +1,50 @@
+{
+
+    "$schema": "https://raw.githubusercontent.com/edertone/TurboBuilder/master/TurboBuilder-Node/src/main/resources/json-schema/turbobuilder.schema.json",
+
+	"metadata": {
+		"name": "turbotesting-node",
+		"description": "General purpose cross-language library to improve automated testing productivity",
+		"builderVersion": "1.0.0"
+	},
+	
+	"validate": {
+	    "projectStructure" : {                    
+            "readmeFileMandatory": false
+        },
+        "filesContent" : {
+    	    "copyrightHeaders": [
+    	    	{
+    	    		"path": "extras/copyright headers/TsFiles-Header.txt",
+    	    		"affectedPaths": ["src"],
+    	    		"includes": ["ts"],
+    	    		"excludes": []
+    	    	},
+    	    	{
+    	    		"path": "extras/copyright headers/JsFiles-Header.txt",
+    	    		"affectedPaths": ["src"],
+    	    		"includes": ["js"],
+    	    		"excludes": []
+    	    	}
+    	    ]
+        }
+    },
+    
+    "build": {
+    
+	    "lib_ts" : {
+	        "declaration": true,
+	        "strict": true,
+	        "sourceMap": true,
+	        "targets": [
+	            {"folder": "ts", "jsTarget": "ES5"}
+	        ]
+	    }
+    },
+    
+    "release": {
+    },
+    
+    "test": [
+    ]
+}
