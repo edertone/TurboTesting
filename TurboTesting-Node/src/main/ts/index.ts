@@ -10,6 +10,7 @@
 
 // Managers package
 export { AutomatedBrowserManager } from './managers/AutomatedBrowserManager';
+export { ConsoleManager } from './managers/ConsoleManager';
 
 // Model package
 
