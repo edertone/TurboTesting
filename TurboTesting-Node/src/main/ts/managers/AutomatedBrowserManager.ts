@@ -8,7 +8,7 @@
  */
  
 
-import { ArrayUtils, StringUtils, ObjectUtils } from 'turbocommons-ts';
+import { ArrayUtils, StringUtils, ObjectUtils, HTTPManagerGetRequest, HTTPManager } from 'turbocommons-ts';
 import { ConsoleManager } from './ConsoleManager';
 
 
@@ -32,6 +32,12 @@ export class AutomatedBrowserManager {
      * The selenium webdriver instance used to manage the browser automation
      */
     private driver: any = null;
+    
+    
+    /**
+     * The HTTPManager instance used to perform http requests
+     */
+    private httpManager: HTTPManager = new HTTPManager();
     
     
     /**
@@ -115,7 +121,7 @@ export class AutomatedBrowserManager {
         
         let results: any = {};
         
-        this.driver.get(url).then(() => {
+        this.driver.get(this.replaceWildCardsOnText(url)).then(() => {
             
             this.driver.getTitle().then((title: any) => {
             
@@ -157,7 +163,7 @@ export class AutomatedBrowserManager {
         // Fail if list has duplicate values
         if(ArrayUtils.hasDuplicateElements(urls.map(l => l.url))){
             
-            throw new Error('AutomatedBrowserManager.assertUrlsRedirect duplicate urls: ' + ArrayUtils.getDuplicateElements(urls.map(l => l.url)).join(', '));
+            throw new Error('AutomatedBrowserManager.assertUrlsRedirect duplicate urls: ' + ArrayUtils.getDuplicateElements(urls.map(l => l.url)).join('\n'));
         }
         
         let anyErrors = 0;
@@ -204,13 +210,13 @@ export class AutomatedBrowserManager {
      * 
      * @param urls An array of objects where each one contains the following properties:
      *        "url" the url to test
-     *        "title" A text that must exist on the browser title for the url once loaded
-     *        "source" A string or an array of strings with texts tat must exist on the url source code
+     *        "title" A text that must exist on the browser title for the url once loaded (or null if not used)
+     *        "source" A string or an array of strings with texts tat must exist on the url source code (or null if not used)
      *        "skipLogsTest" True if we want to avoid error messages when an error is detected on the browser
-     *                       console output for an url. If false or not specified, the console output will be analyzed for errors
-     *        "startWith" If defined, the loaded source code must start with the specified text
-     *        "endWith" If defined, the loaded source code must end with the specified text
-     *        "notContains" If defined, the loaded source code must not contain the specified text
+     *                       console output for an url. If false or not specified, the console output will be always analyzed for errors
+     *        "startWith" If defined, the loaded source code must start with the specified text (or null if not used)
+     *        "endWith" If defined, the loaded source code must end with the specified text (or null if not used)
+     *        "notContains" A string or an array of strings with texts tat must NOT exist on the url source code (or null if not used)
      * @param completeCallback A method that will be called once all the urls from the list have been tested.
      */
     assertUrlsLoadOk(urls: any[], completeCallback: () => void){
@@ -218,7 +224,7 @@ export class AutomatedBrowserManager {
         // Fail if list has duplicate values
         if(ArrayUtils.hasDuplicateElements(urls.map(l => l.url))){
             
-            throw new Error('AutomatedBrowserManager.assertUrlsLoadOk duplicate urls: ' + ArrayUtils.getDuplicateElements(urls.map(l => l.url)).join(', '));
+            throw new Error('AutomatedBrowserManager.assertUrlsLoadOk duplicate urls: ' + ArrayUtils.getDuplicateElements(urls.map(l => l.url)).join('\n'));
         }
         
         let anyErrors = 0;
@@ -295,39 +301,36 @@ export class AutomatedBrowserManager {
                     this.console.error(`Source expected to end with: ${entry.endWith}\nBut ended with: ${results.source.slice(-40)}\nFor the url: ${entry.url}`);
                 }
                 
-                if(entry.notContains !== null &&
-                   results.source.indexOf(entry.notContains) >= 0){
+                if(entry.notContains !== null){
                     
-                    anyErrors ++;
+                    let notContainsArray = ArrayUtils.isArray(entry.notContains) ? entry.notContains : [entry.notContains];
                     
-                    this.console.error(`Source expected to not contain: ${entry.notContains}\nBut contained it for the url: ${entry.url}`);
+                    for (let notContainsElement of notContainsArray) {
+                        
+                        notContainsElement = this.replaceWildCardsOnText(notContainsElement);
+                        
+                        if(results.source.indexOf(notContainsElement) >= 0){
+                             
+                             anyErrors ++;
+                             
+                             this.console.error(`Source expected to contain: ${notContainsElement}\nBut not contained it for the url: ${entry.url}`);
+                        }
+                    }
                 }
                 
                 if(entry.source !== null){
                     
-                    if(ArrayUtils.isArray(entry.source)){
+                    let sourceArray = ArrayUtils.isArray(entry.source) ? entry.source : [entry.source];
                     
-                        for (let entrySourceElement of entry.source) {
-                            
-                            entrySourceElement = this.replaceWildCardsOnText(entrySourceElement);
-                            
-                            if(results.source.indexOf(entrySourceElement) < 0){
-                                 
-                                 anyErrors ++;
-                                 
-                                 this.console.error(`Source expected to contain: ${entrySourceElement}\nBut not contained it for the url: ${entry.url}`);
-                             }
-                        }
+                    for (let sourceElement of sourceArray) {
                         
-                    }else{
-                    
-                        entry.source = this.replaceWildCardsOnText(entry.source);
+                        sourceElement = this.replaceWildCardsOnText(sourceElement);
                         
-                        if(results.source.indexOf(entry.source) < 0){
+                        if(results.source.indexOf(sourceElement) < 0){
                             
                             anyErrors ++;
                             
-                            this.console.error(`Source expected to contain: ${entry.source}\nBut not contained it for the url: ${entry.url}`);
+                            this.console.error(`Source expected to contain: ${sourceElement}\nBut not contained it for the url: ${entry.url}`);
                         }
                     }
                 }
@@ -341,6 +344,62 @@ export class AutomatedBrowserManager {
                 
                 recursiveCaller(urls, completeCallback);
             });
+        }
+        
+        recursiveCaller(urls, completeCallback);
+    }
+    
+    
+    /**
+     * Test that all the urls on a given list throw a 404 error
+     * 
+     * If any of the provided urls gives a 200 ok result, the test will fail
+     * 
+     * @param urls An array of strings where each item is an url to test
+     * @param completeCallback A method that will be called once all the urls from the list have been tested.
+     */
+    assertUrlsFail(urls: string[], completeCallback: () => void){
+        
+        // Fail if list has duplicate values
+        if(ArrayUtils.hasDuplicateElements(urls)){
+            
+            throw new Error('AutomatedBrowserManager.assertUrlsFail duplicate urls: ' + ArrayUtils.getDuplicateElements(urls).join('\n'));
+        }
+        
+        let anyErrors = 0;
+        
+        // Load all the urls on the json file and perform a request for each one.
+        let recursiveCaller = (urls: string[], completeCallback: () => void) => {
+            
+            if(urls.length <= 0){
+                
+                if(anyErrors > 0){
+                    
+                    throw new Error(`AutomatedBrowserManager.assertUrlsFail failed with ${anyErrors} errors`);
+                }
+                
+                return completeCallback();
+            }
+            
+            let url = this.replaceWildCardsOnText(String(urls.shift()));
+            
+            let request = new HTTPManagerGetRequest(url);
+            
+            request.errorCallback = () => {
+            
+                recursiveCaller(urls, completeCallback);
+            };
+            
+            request.successCallback = () => {
+            
+                anyErrors ++;
+                    
+                this.console.error(`URL expected to fail with 404 but was 200 ok: ${url}`);
+            
+                recursiveCaller(urls, completeCallback);
+            };
+            
+            this.httpManager.execute(request);
         }
         
         recursiveCaller(urls, completeCallback);
