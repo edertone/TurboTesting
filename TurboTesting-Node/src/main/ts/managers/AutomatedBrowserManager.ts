@@ -418,7 +418,7 @@ export class AutomatedBrowserManager {
         this.loadUrl(siteRoot, (results) => {
             
             // TODO
-            console.log('TODO - Perform site recursive tests on ' + siteRoot);
+            console.log('TODO - Perform site recursive tests on ' + results.finalUrl);
             
             completeCallback();
         });
