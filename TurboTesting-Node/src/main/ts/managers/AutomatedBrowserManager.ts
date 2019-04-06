@@ -407,6 +407,22 @@ export class AutomatedBrowserManager {
     
     
     /**
+     * This method will perform standard recursive tests on a full website provided its root link. The whole site will be tested
+     * on all its pages against broken links, valid html structure, valid css, ...
+     * 
+     * @param siteRoot The full url to the root of the site to test
+     * @param completeCallback A method that will be executed once all the tests have finished
+     */
+    assertWholeWebsite(siteRoot: string, completeCallback: () => void){
+        
+        // TODO
+        console.log('TODO - Perform site recursive tests on ' + siteRoot);
+        
+        completeCallback();
+    }
+    
+    
+    /**
      * Auxiliary method to replace all wildcard occurences on the given text
      * 
      * @param text A text where wildcards will be looked for
@@ -429,6 +445,9 @@ export class AutomatedBrowserManager {
      */
     quit(){
         
-        this.driver.quit();
+        if(this.driver !== null){
+            
+            this.driver.quit();
+        }
     }
 }
