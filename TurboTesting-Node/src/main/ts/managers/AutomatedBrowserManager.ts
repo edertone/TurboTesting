@@ -221,13 +221,13 @@ export class AutomatedBrowserManager {
      */
     assertUrlsLoadOk(urls: any[], completeCallback: () => void){
     
+        let anyErrors = 0;
+        
         // Fail if list has duplicate values
         if(ArrayUtils.hasDuplicateElements(urls.map(l => l.url))){
             
             throw new Error('AutomatedBrowserManager.assertUrlsLoadOk duplicate urls: ' + ArrayUtils.getDuplicateElements(urls.map(l => l.url)).join('\n'));
         }
-        
-        let anyErrors = 0;
         
         // Load all the urls on the list and perform a request for each one.
         let recursiveCaller = (urls: any[], completeCallback: () => void) => {
