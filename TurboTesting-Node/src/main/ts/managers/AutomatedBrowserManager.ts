@@ -415,10 +415,13 @@ export class AutomatedBrowserManager {
      */
     assertWholeWebsite(siteRoot: string, completeCallback: () => void){
         
-        // TODO
-        console.log('TODO - Perform site recursive tests on ' + siteRoot);
-        
-        completeCallback();
+        this.loadUrl(siteRoot, (results) => {
+            
+            // TODO
+            console.log('TODO - Perform site recursive tests on ' + siteRoot);
+            
+            completeCallback();
+        });
     }
     
     
