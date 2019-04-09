@@ -15,6 +15,7 @@
  */
 export class ConsoleManager {
     
+    
     /**
      * An improved console class that implements useful methods for the console output
      * 
@@ -94,7 +95,7 @@ export class ConsoleManager {
     
     /**
      * Show an error to the user
-     * If quit parameter is true, the application will also exit with error code 1 (which means exit with error)
+     * If quit parameter is true, the application will also die with error code 1 (which means exit with error)
      */
     error(message:string, quit = false) {
         
