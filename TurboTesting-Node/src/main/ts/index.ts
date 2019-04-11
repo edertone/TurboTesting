@@ -11,6 +11,8 @@
 // Managers package
 export { AutomatedBrowserManager } from './managers/AutomatedBrowserManager';
 export { ConsoleManager } from './managers/ConsoleManager';
+export { HTTPTestsManager } from './managers/HTTPTestsManager';
+export { StringTestsManager } from './managers/StringTestsManager';
 export { TerminalManager } from './managers/TerminalManager';
 export { TurboSiteProjectManager } from './managers/TurboSiteProjectManager';
 

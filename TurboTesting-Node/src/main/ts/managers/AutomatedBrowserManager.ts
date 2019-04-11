@@ -8,8 +8,10 @@
  */
  
 
-import { ArrayUtils, StringUtils, ObjectUtils, HTTPManagerGetRequest, HTTPManager } from 'turbocommons-ts';
+import { ArrayUtils } from 'turbocommons-ts';
 import { ConsoleManager } from './ConsoleManager';
+import { HTTPTestsManager } from './HTTPTestsManager';
+import { StringTestsManager } from './StringTestsManager';
 
 
 /**
@@ -35,9 +37,20 @@ export class AutomatedBrowserManager {
     
     
     /**
-     * The HTTPManager instance used to perform http requests
+     * The ConsoleManager instance used to perform console output
      */
-    private httpManager: HTTPManager = new HTTPManager();
+    private consoleManager: ConsoleManager;
+    
+    /**
+     * The StringTestsManager instance used to perform string tests
+     */
+    private stringTestsManager: StringTestsManager;
+    
+    
+    /**
+     * The httpTestsManager instance used to perform http request tests
+     */
+    private httpTestsManager: HTTPTestsManager;
     
     
     /**
@@ -48,14 +61,20 @@ export class AutomatedBrowserManager {
      * @param execSync A node execSync module instance (const { execSync } = require('child_process'))
      * @param webdriver A node webdriver module instance (const webdriver = require('selenium-webdriver');)
      * @param chrome A node chrome module instance (const chrome = require('selenium-webdriver/chrome'))
-     * @param console An initialized ConsoleManager instance
+     * @param console An instance for the console process node object
+     * @param process An instance for the global process node object
      * 
      * @return An AutomatedBrowserManager instance
      */
     constructor(private execSync:any,
                 private webdriver:any,
                 private chrome:any,
-                private console:ConsoleManager) {
+                console:any,
+                process:any) {
+
+        this.stringTestsManager = new StringTestsManager(console, process);
+        this.consoleManager = new ConsoleManager(console, process);
+        this.httpTestsManager = new HTTPTestsManager(console, process);
     }
     
     
@@ -77,7 +96,7 @@ export class AutomatedBrowserManager {
                     
         }catch(e){
             
-            throw new Error("Error: Could not initialize selenium chromedriver. Please make sure it is available on your OS cmd path");
+            this.quitWithError("Error: Could not initialize selenium chromedriver. Please make sure it is available on your OS cmd path");
         }
         
         let chromeOptions = new this.chrome.Options();
@@ -121,7 +140,7 @@ export class AutomatedBrowserManager {
         
         let results: any = {};
         
-        this.driver.get(this.replaceWildCardsOnText(url)).then(() => {
+        this.driver.get(this.stringTestsManager.replaceWildCardsOnText(url, this.wildcards)).then(() => {
             
             this.driver.getTitle().then((title: any) => {
             
@@ -163,7 +182,7 @@ export class AutomatedBrowserManager {
         // Fail if list has duplicate values
         if(ArrayUtils.hasDuplicateElements(urls.map(l => l.url))){
             
-            throw new Error('AutomatedBrowserManager.assertUrlsRedirect duplicate urls: ' + ArrayUtils.getDuplicateElements(urls.map(l => l.url)).join('\n'));
+            this.quitWithError('AutomatedBrowserManager.assertUrlsRedirect duplicate urls: ' + ArrayUtils.getDuplicateElements(urls.map(l => l.url)).join('\n'));
         }
         
         let anyErrors = 0;
@@ -175,15 +194,15 @@ export class AutomatedBrowserManager {
                 
                 if(anyErrors > 0){
                     
-                    throw new Error(`AutomatedBrowserManager.assertUrlsRedirect failed with ${anyErrors} errors`);
+                    this.quitWithError(`AutomatedBrowserManager.assertUrlsRedirect failed with ${anyErrors} errors`);
                 }
                 
                 return completeCallback();
             }
             
             let entry = urls.shift();
-            entry.url = this.replaceWildCardsOnText(entry.url);
-            entry.to = this.replaceWildCardsOnText(entry.to);
+            entry.url = this.stringTestsManager.replaceWildCardsOnText(entry.url, this.wildcards);
+            entry.to = this.stringTestsManager.replaceWildCardsOnText(entry.to, this.wildcards);
             
             this.loadUrl(entry.url, (results) => {
                 
@@ -191,7 +210,7 @@ export class AutomatedBrowserManager {
                     
                     anyErrors ++;
                     
-                    this.console.error('Url redirect failed. expected:\n    ' + entry.url +
+                    this.consoleManager.error('Url redirect failed. expected:\n    ' + entry.url +
                         ' to redirect to:\n    ' + entry.to + ' but was:\n    ' + results.finalUrl);
                 }
                     
@@ -211,7 +230,7 @@ export class AutomatedBrowserManager {
      * @param urls An array of objects where each one contains the following properties:
      *        "url" the url to test
      *        "title" A text that must exist on the browser title for the url once loaded (or null if not used)
-     *        "source" A string or an array of strings with texts tat must exist on the url source code (or null if not used)
+     *        "source" A string or an array of strings with texts that must exist on the url source code (or null if not used)
      *        "skipLogsTest" True if we want to avoid error messages when an error is detected on the browser
      *                       console output for an url. If false or not specified, the console output will be always analyzed for errors
      *        "startWith" If defined, the loaded source code must start with the specified text (or null if not used)
@@ -226,7 +245,7 @@ export class AutomatedBrowserManager {
         // Fail if list has duplicate values
         if(ArrayUtils.hasDuplicateElements(urls.map(l => l.url))){
             
-            throw new Error('AutomatedBrowserManager.assertUrlsLoadOk duplicate urls: ' + ArrayUtils.getDuplicateElements(urls.map(l => l.url)).join('\n'));
+            this.quitWithError('AutomatedBrowserManager.assertUrlsLoadOk duplicate urls: ' + ArrayUtils.getDuplicateElements(urls.map(l => l.url)).join('\n'));
         }
         
         // Load all the urls on the list and perform a request for each one.
@@ -236,15 +255,16 @@ export class AutomatedBrowserManager {
                 
                 if(anyErrors > 0){
                     
-                    throw new Error(`AutomatedBrowserManager.assertUrlsLoadOk failed with ${anyErrors} errors`);
+                    this.quitWithError(`AutomatedBrowserManager.assertUrlsLoadOk failed with ${anyErrors} errors`);
                 }
                 
                 return completeCallback();
             }
         
             let entry = urls.shift();
-            entry.url = this.replaceWildCardsOnText(entry.url);
-           
+            entry.url = this.stringTestsManager.replaceWildCardsOnText(entry.url, this.wildcards);
+            entry.source = this.stringTestsManager.replaceWildCardsOnObject(entry.source, this.wildcards);
+            
             this.loadUrl(entry.url, (results) => {
                 
                 // Check that there are no SEVERE error logs on the browser
@@ -256,90 +276,60 @@ export class AutomatedBrowserManager {
                             
                             anyErrors ++;
                             
-                            this.console.error('Browser console has shown an error:\n    ' + logEntry.message + '\n' +
+                            this.consoleManager.error('Browser console has shown an error:\n    ' + logEntry.message + '\n' +
                                 'For the url:\n    ' + entry.url);
                         }
                     }
                 }
                 
                 // Make sure no 404 error is shown at the result title
-                if(results.title.indexOf('404 Not Found') >= 0 ||
-                   results.title.indexOf('Error 404 page') >= 0){
-                    
-                    anyErrors ++;
-                    
-                    this.console.error('Unexpected 404 error found:\n    ' + results.title + '\n' +
-                        'For the url:\n    ' + entry.url);
-                }
+                if(!this.stringTestsManager.assertTextNotContainsAny(results.title, ['404 Not Found', 'Error 404 page'],
+                        `Unexpected 404 error found:\n    ${results.title}\nFor the url:\n    ${entry.url}`)){
                 
+                    anyErrors ++;
+                }
+                                
                 // Make sure title contains the text that is specified on the current url expected values entry
-                if(entry.title !== null){
-                    
-                    entry.title = this.replaceWildCardsOnText(entry.title);
-                    
-                    if(results.title.indexOf(entry.title) < 0){
-                        
-                        anyErrors ++;
-                        
-                        this.console.error(`Title: ${results.title}\nDoes not contain expected text: ${entry.title}\nFor the url: ${entry.url}`);
-                    }
-                }
+                if(entry.title !== null &&
+                   !this.stringTestsManager.assertTextContainsAll(results.title, entry.title,
+                            `Title: ${results.title}\nDoes not contain expected text: ${entry.title}\nFor the url: ${entry.url}`)){
                 
-                if(entry.startWith !== null &&
-                   !results.source.startsWith(entry.startWith)){
-                    
                     anyErrors ++;
-                        
-                    this.console.error(`Source expected to start with: ${entry.startWith}\nBut started with: ${results.source.substr(0, 40)}\nFor the url: ${entry.url}`);
+                }
+            
+                if(entry.startWith !== null &&
+                   !this.stringTestsManager.assertTextStartsWith(results.source, entry.startWith,
+                           `Source expected to start with: ${entry.startWith}\nBut started with: ${results.source.substr(0, 40)}\nFor the url: ${entry.url}`)){
+                      
+                    anyErrors ++;
                 }
                 
                 if(entry.endWith !== null &&
-                   !results.source.endsWith(entry.endWith)){
-                     
+                   !this.stringTestsManager.assertTextEndsWith(results.source, entry.endWith,
+                           `Source expected to end with: ${entry.endWith}\nBut ended with: ${results.source.slice(-40)}\nFor the url: ${entry.url}`)){
+                  
                     anyErrors ++;
-                         
-                    this.console.error(`Source expected to end with: ${entry.endWith}\nBut ended with: ${results.source.slice(-40)}\nFor the url: ${entry.url}`);
                 }
                 
-                if(entry.notContains !== null){
-                    
-                    let notContainsArray = ArrayUtils.isArray(entry.notContains) ? entry.notContains : [entry.notContains];
-                    
-                    for (let notContainsElement of notContainsArray) {
-                        
-                        notContainsElement = this.replaceWildCardsOnText(notContainsElement);
-                        
-                        if(results.source.indexOf(notContainsElement) >= 0){
-                             
-                             anyErrors ++;
-                             
-                             this.console.error(`Source expected to contain: ${notContainsElement}\nBut not contained it for the url: ${entry.url}`);
-                        }
-                    }
+                if(entry.notContains !== null &&
+                   !this.stringTestsManager.assertTextNotContainsAny(results.source, entry.notContains,
+                           `Source NOT expected to contain: $fragment\nBut contained it for the url: ${entry.url}`)){
+
+                    anyErrors ++;
                 }
                 
-                if(entry.source !== null){
-                    
-                    let sourceArray = ArrayUtils.isArray(entry.source) ? entry.source : [entry.source];
-                    
-                    for (let sourceElement of sourceArray) {
-                        
-                        sourceElement = this.replaceWildCardsOnText(sourceElement);
-                        
-                        if(results.source.indexOf(sourceElement) < 0){
-                            
-                            anyErrors ++;
-                            
-                            this.console.error(`Source expected to contain: ${sourceElement}\nBut not contained it for the url: ${entry.url}`);
-                        }
-                    }
+                if(entry.source !== null &&
+                   !this.stringTestsManager.assertTextContainsAll(results.source, entry.source,
+                           `Source expected to contain: $fragment\nBut not contained it for the url: ${entry.url}`)){
+
+                    anyErrors ++;
                 }
                 
                 if(results.finalUrl !== entry.url){
                     
                     anyErrors ++;
                     
-                    this.console.error(`Unexpected redirection for the url: ${entry.url}\nWhich redirected to: ${results.finalUrl}`);
+                    this.consoleManager.error(`Unexpected redirection for the url: ${entry.url}\nWhich redirected to: ${results.finalUrl}`);
                 }
                 
                 recursiveCaller(urls, completeCallback);
@@ -359,50 +349,17 @@ export class AutomatedBrowserManager {
      * @param completeCallback A method that will be called once all the urls from the list have been tested.
      */
     assertUrlsFail(urls: string[], completeCallback: () => void){
+    
+        this.httpTestsManager.wildcards = this.wildcards;
         
-        // Fail if list has duplicate values
-        if(ArrayUtils.hasDuplicateElements(urls)){
+        try {
+
+            this.httpTestsManager.assertUrlsFail(urls, completeCallback);
             
-            throw new Error('AutomatedBrowserManager.assertUrlsFail duplicate urls: ' + ArrayUtils.getDuplicateElements(urls).join('\n'));
+        } catch (e) {
+
+            this.quitWithError(e.message);
         }
-        
-        let anyErrors = 0;
-        
-        // Load all the urls on the json file and perform a request for each one.
-        let recursiveCaller = (urls: string[], completeCallback: () => void) => {
-            
-            if(urls.length <= 0){
-                
-                if(anyErrors > 0){
-                    
-                    throw new Error(`AutomatedBrowserManager.assertUrlsFail failed with ${anyErrors} errors`);
-                }
-                
-                return completeCallback();
-            }
-            
-            let url = this.replaceWildCardsOnText(String(urls.shift()));
-            
-            let request = new HTTPManagerGetRequest(url);
-            
-            request.errorCallback = () => {
-            
-                recursiveCaller(urls, completeCallback);
-            };
-            
-            request.successCallback = () => {
-            
-                anyErrors ++;
-                    
-                this.console.error(`URL expected to fail with 404 but was 200 ok: ${url}`);
-            
-                recursiveCaller(urls, completeCallback);
-            };
-            
-            this.httpManager.execute(request);
-        }
-        
-        recursiveCaller(urls, completeCallback);
     }
     
     
@@ -426,24 +383,6 @@ export class AutomatedBrowserManager {
     
     
     /**
-     * Auxiliary method to replace all wildcard occurences on the given text
-     * 
-     * @param text A text where wildcards will be looked for
-     */
-    private replaceWildCardsOnText(text: string){
-        
-        let result = text;
-        
-        for (let wildcard of ObjectUtils.getKeys(this.wildcards)) {
-    
-            result = StringUtils.replace(result, wildcard, this.wildcards[wildcard]);
-        }
-        
-        return result;
-    }
-    
-    
-    /**
      * Disconnect and close the browser
      */
     quit(){
@@ -452,5 +391,16 @@ export class AutomatedBrowserManager {
             
             this.driver.quit();
         }
+    }
+    
+    
+    /**
+     * Make sure the browser driver is correctly closed and throw an exception with the given message
+     */
+    private quitWithError(error: string){
+        
+        this.quit();
+        
+        throw new Error(error);
     }
 }
