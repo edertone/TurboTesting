@@ -3,14 +3,14 @@
 
 ## via command line
 
-Basic default tests are called by running tb -bst
+Basic default tests are called by running tb -cbt
 
-Write here more docs about running project tests via cmd
+IMPORTANT: The unit tests on this project will not work when executed in release mode (crt)
 
 ## via IDE
 
-Write here docs about running project tests with an IDE
+NA
 
 ## OS Setup
 
-Write here docs about Operating system setup that may be required to run the tests
+Nothing special required

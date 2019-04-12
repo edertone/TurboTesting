@@ -12,11 +12,11 @@ import { FilesManager } from 'turbodepot-node';
 
 
 /**
- * TurboSiteProjectManager class
+ * TurboSiteTestsManager class
  *
  * @see constructor()
  */
-export class TurboSiteProjectManager {
+export class TurboSiteTestsManager {
     
     
     /**

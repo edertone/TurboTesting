@@ -9,7 +9,7 @@
  
 
 import { ArrayUtils } from 'turbocommons-ts';
-import { ConsoleManager } from './ConsoleManager';
+import { ConsoleManager } from 'turbodepot-node';
 import { HTTPTestsManager } from './HTTPTestsManager';
 import { StringTestsManager } from './StringTestsManager';
 

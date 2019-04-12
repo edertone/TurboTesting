@@ -9,7 +9,7 @@
 
 
 import { StringUtils, ArrayUtils, ObjectUtils } from 'turbocommons-ts';
-import { ConsoleManager } from './ConsoleManager';
+import { ConsoleManager } from 'turbodepot-node';
 
 
 /**
@@ -150,23 +150,44 @@ export class StringTestsManager {
      * @param text A text to be tested
      * @param toBeFound A string or a list of strings that must all exist on the provided text
      * @param message An error message that will be shown on the console for each one of the toBeFound values that fail
-     *        the assertion. We can define wildcards in the message to be replaced in each case:
+     *        the assertion (If not provided, a default one willl be used). We can define wildcards in the message to be replaced in each case:
      *        - $fragment will be replaced by each one of the toBeFound variable values that fail the assertion
+     * @param strictOrder If set to true, the toBeFound texts must appear in the target text with same order as defined (if more than one)  
      *        
      * @return true if all of the strings are found on the provided text, false if any of the strings is not found on the provided text
      */
-    assertTextContainsAll(text: string, toBeFound: string|string[], message: string){
+    assertTextContainsAll(text: string, toBeFound: string|string[], message: string = '', strictOrder = true){
         
         let anyErrors = 0;
+        let indexesFound = [];
         let fragmentsArray = ArrayUtils.isArray(toBeFound) ? toBeFound : [String(toBeFound)];
+        
+        if(message === ''){
+            
+            message = `Text expected to contain: $fragment\nBut it didn't`;
+        }
         
         for (let fragment of fragmentsArray) {
             
-            if(text.indexOf(fragment) < 0){
+            indexesFound.push(text.indexOf(fragment));
+            
+            if(indexesFound[indexesFound.length - 1] < 0){
                 
                 anyErrors ++;
                 
                 this.consoleManager.error(StringUtils.replace(message, ['$fragment'], [fragment]));
+            }
+            
+            if(strictOrder){
+                
+                let maxIndexFound = Math.max.apply(null, indexesFound);
+                
+                if(indexesFound[indexesFound.length - 1] < maxIndexFound){
+                    
+                    anyErrors ++;
+                    
+                    this.consoleManager.error('The following string was found on text, but does not follow the expected strict order: ' + fragment);
+                }
             }
         }
         

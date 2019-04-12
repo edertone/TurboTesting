@@ -9,7 +9,7 @@
 
 
 import { ArrayUtils, HTTPManagerGetRequest, HTTPManager, HTTPManagerPostRequest, HTTPManagerBaseRequest, ObjectUtils } from 'turbocommons-ts';
-import { ConsoleManager } from './ConsoleManager';
+import { ConsoleManager } from 'turbodepot-node';
 import { StringTestsManager } from './StringTestsManager';
 
 

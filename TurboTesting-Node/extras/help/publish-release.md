@@ -1,6 +1,6 @@
 # How to make the library available to the public:
 
-1 - Make sure all tests pass
+1 - Make sure all tests pass (tb -cbt)
 
 2 - Review git changelog to decide the new version value based on the GIT changes: minor, major, ...
     
@@ -12,7 +12,7 @@
 5 - Make sure the git tag is updated with the new project version we want to publish
     (First in remote GIT repo and then in our Local by performing a fetch)
 
-6 - Generate a release build executing tests (tb -crt)
+6 - Generate a release build executing tests (tb -cr)
 
 7 - Copy the package.json file from the project root to target/turbotesting-node-x.x.x/dist/ts
 
