@@ -320,7 +320,7 @@ export class AutomatedBrowserManager {
                 
                 if(entry.source !== null &&
                    !this.stringTestsManager.assertTextContainsAll(results.source, entry.source,
-                           `Source expected to contain: $fragment\nBut not contained it for the url: ${entry.url}`)){
+                           `\nError searching for: $fragment on text in the url: ${entry.url}\n$errorMsg\n`)){
 
                     anyErrors ++;
                 }

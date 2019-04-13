@@ -152,6 +152,7 @@ export class StringTestsManager {
      * @param message An error message that will be shown on the console for each one of the toBeFound values that fail
      *        the assertion (If not provided, a default one willl be used). We can define wildcards in the message to be replaced in each case:
      *        - $fragment will be replaced by each one of the toBeFound variable values that fail the assertion
+     *        - $errorMsg will be replaced by the specific error that happened on each of the toBeFound variable values that fail the assertion
      * @param strictOrder If set to true, the toBeFound texts must appear in the target text with same order as defined (if more than one)  
      *        
      * @return true if all of the strings are found on the provided text, false if any of the strings is not found on the provided text
@@ -164,7 +165,7 @@ export class StringTestsManager {
         
         if(message === ''){
             
-            message = `Text expected to contain: $fragment\nBut it didn't`;
+            message = `\nError found with the specified fragment $fragment: $errorMsg\n`;
         }
         
         for (let fragment of fragmentsArray) {
@@ -175,7 +176,8 @@ export class StringTestsManager {
                 
                 anyErrors ++;
                 
-                this.consoleManager.error(StringUtils.replace(message, ['$fragment'], [fragment]));
+                this.consoleManager.error(StringUtils.replace(message,['$fragment', '$errorMsg'],
+                        [fragment, 'The value was not found on the text']));
             }
             
             if(strictOrder){
@@ -186,7 +188,8 @@ export class StringTestsManager {
                     
                     anyErrors ++;
                     
-                    this.consoleManager.error('The following string was found on text, but does not follow the expected strict order: ' + fragment);
+                    this.consoleManager.error(StringUtils.replace(message, ['$fragment', '$errorMsg'],
+                            [fragment, 'The string was found on text, but does not follow the expected strict order']));
                 }
             }
         }
