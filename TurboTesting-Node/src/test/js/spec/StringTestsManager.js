@@ -27,6 +27,8 @@ describe('cmd-parameter-build', function() {
 
         expect(this.sut.assertTextContainsAll('hello', ['h', 'e', 'o'])).toBe(true);
         expect(this.sut.assertTextContainsAll('hello', ['e', 'h'])).toBe(false);
+        expect(this.sut.assertTextContainsAll('hello', ['h', 'l', 'o'])).toBe(true);
+        expect(this.sut.assertTextContainsAll('one two three two four', ['one', 'two', 'four'])).toBe(true);
     });
     
     
