@@ -8,6 +8,7 @@
  */
 
 
+import { StringUtils } from 'turbocommons-ts';
 import { FilesManager } from 'turbodepot-node';
 
 
@@ -30,6 +31,7 @@ export class TurboSiteTestsManager {
      * 
      * This constructor requires some node modules to work, which are passed as dependencies
      *  
+     * @param projectRootPath Full filesystem path to the root of the project we are testing
      * @param fs A node fs module instance (const fs = require('fs'))
      * @param os A node os module instance (const os = require('os'))
      * @param path A node path module instance (const path = require('path'))
@@ -38,13 +40,56 @@ export class TurboSiteTestsManager {
      * 
      * @return A TurboSiteTestsManager instance
      */
-    constructor(fs:any,
+    constructor(private projectRootPath:string,
+                fs:any,
                 os:any,
                 path:any,
                 process: any,
                 crypto: any) {
         
         this.filesManager = new FilesManager(fs, os, path, process, crypto);
+    }
+    
+    
+    /**
+     * TODO
+     */
+    getWildcards(){
+        
+        let turboBuilderSetup = this.getSetup('turbobuilder');
+        let turboSiteSetup = this.getSetup('turbosite');
+
+        // TODO - per trobar el cache hash, mirem si a la carpeta de projecte que ens han passat existeix
+        // una carpeta target. A partir d'aqui, busquem el index.php corresponent, en llegim el site setup
+        // i d'alla podrem treure el cache hash.
+        
+        // TODO - This must be improved.
+        // Projectname fails here if we are testing a release compiled version
+        // let projectName = turboBuilderSetup.metadata.name;
+        
+        return {
+            "$host": turboBuilderSetup.sync.remoteUrl.split('://')[1],
+            "$locale": turboSiteSetup.locales[0].split('_')[0],
+            "$homeView": turboSiteSetup.homeView,
+            "$cacheHash": 'TODO - how to find this?',
+            "$baseURL": turboSiteSetup.baseURL === '' ? '' : '/' + turboSiteSetup.baseURL
+        };
+    }
+    
+    
+    /**
+     * Obtain the requested setup data as a fully initialized object from the project that is currently defined as root on this class.
+     * 
+     * @param setupName The name for a setup that we want to read from the current project. This must be the same name that is
+     *        defined on the physical .json file that stores the setup. For example: "turbosite" to get the "turbosite.json" setup
+     *
+     * @return An object containing all the requested setup data
+     */
+    getSetup(setupName: string){
+    
+        let setupPath = StringUtils.formatPath(this.projectRootPath + this.filesManager.dirSep() + setupName + '.json');
+        
+        return JSON.parse(this.filesManager.readFile(setupPath));
     }
 
 

@@ -146,10 +146,14 @@ export class AutomatedBrowserManager {
             
                 results.title = title;
                 
-                this.driver.getPageSource().then((source: any) => {
+                this.driver.executeScript(() => {
                     
-                    results.source = source;
-                    
+                    return document!.documentElement!.outerHTML;
+                  
+                }).then((html: string) => {
+                
+                    results.source = html;
+
                     this.driver.getCurrentUrl().then((finalUrl: string) => {
                         
                         results.finalUrl = finalUrl;
@@ -228,14 +232,14 @@ export class AutomatedBrowserManager {
      * If any of the provided urls fails any of the verifications, the test will fail.
      * 
      * @param urls An array of objects where each one contains the following properties:
-     *        "url" the url to test
-     *        "title" A text that must exist on the browser title for the url once loaded (or null if not used)
-     *        "source" A string or an array of strings with texts that must exist on the url source code (or null if not used)
+     *        "url" the url to test (mandatory)
+     *        "title" A text that must exist on the browser title for the url once loaded (skip it or set it to null if not used)
+     *        "source" A string or an array of strings with texts that must exist on the url source code (skip it or set it to null if not used)
      *        "skipLogsTest" True if we want to avoid error messages when an error is detected on the browser
      *                       console output for an url. If false or not specified, the console output will be always analyzed for errors
-     *        "startWith" If defined, the loaded source code must start with the specified text (or null if not used)
-     *        "endWith" If defined, the loaded source code must end with the specified text (or null if not used)
-     *        "notContains" A string or an array of strings with texts tat must NOT exist on the url source code (or null if not used)
+     *        "startWith" If defined, the loaded source code must start with the specified text (skip it or set it to null if not used)
+     *        "endWith" If defined, the loaded source code must end with the specified text (skip it or set it to null if not used)
+     *        "notContains" A string or an array of strings with texts tat must NOT exist on the url source code (skip it or set it to null if not used)
      * @param completeCallback A method that will be called once all the urls from the list have been tested.
      */
     assertUrlsLoadOk(urls: any[], completeCallback: () => void){
@@ -290,35 +294,35 @@ export class AutomatedBrowserManager {
                 }
                                 
                 // Make sure title contains the text that is specified on the current url expected values entry
-                if(entry.title !== null &&
+                if(entry.title && entry.title !== null &&
                    !this.stringTestsManager.assertTextContainsAll(results.title, entry.title,
                             `Title: ${results.title}\nDoes not contain expected text: ${entry.title}\nFor the url: ${entry.url}`)){
                 
                     anyErrors ++;
                 }
             
-                if(entry.startWith !== null &&
+                if(entry.startWith && entry.startWith !== null &&
                    !this.stringTestsManager.assertTextStartsWith(results.source, entry.startWith,
-                           `Source expected to start with: ${entry.startWith}\nBut started with: ${results.source.substr(0, 40)}\nFor the url: ${entry.url}`)){
+                           `Source expected to start with: ${entry.startWith}\nBut started with: ${results.source.substr(0, 80)}\nFor the url: ${entry.url}`)){
                       
                     anyErrors ++;
                 }
                 
-                if(entry.endWith !== null &&
+                if(entry.endWith && entry.endWith !== null &&
                    !this.stringTestsManager.assertTextEndsWith(results.source, entry.endWith,
-                           `Source expected to end with: ${entry.endWith}\nBut ended with: ${results.source.slice(-40)}\nFor the url: ${entry.url}`)){
+                           `Source expected to end with: ${entry.endWith}\nBut ended with: ${results.source.slice(-80)}\nFor the url: ${entry.url}`)){
                   
                     anyErrors ++;
                 }
                 
-                if(entry.notContains !== null &&
+                if(entry.notContains && entry.notContains !== null &&
                    !this.stringTestsManager.assertTextNotContainsAny(results.source, entry.notContains,
                            `Source NOT expected to contain: $fragment\nBut contained it for the url: ${entry.url}`)){
 
                     anyErrors ++;
                 }
                 
-                if(entry.source !== null &&
+                if(entry.source && entry.source !== null &&
                    !this.stringTestsManager.assertTextContainsAll(results.source, entry.source,
                            `\nError searching for: $fragment on text in the url: ${entry.url}\n$errorMsg\n`)){
 
