@@ -23,6 +23,13 @@ export class AutomatedBrowserManager {
     
     
     /**
+     * Defines the default amount of miliseconds to wait for the existence of elements before failing
+     * when performing interactions with the browser on several methods of this class 
+     */
+    waitTimeout = 20000;
+    
+    
+    /**
      * An object containing key / pair values where each key is the name of a wildcard,
      * and the key value is the text that will replace each wildcard on all the texts analyzed
      * by this class (urls, html code, document titles, etc...)
@@ -128,6 +135,35 @@ export class AutomatedBrowserManager {
     
     
     /**
+     * Remove all the currently visible entries from the browser console 
+     * 
+     * @param completeCallback A method that will be executed once the browser console is cleared
+     */
+    clearConsole(completeCallback: () => void){
+        
+        return this.driver.executeScript("return console.clear()").then(completeCallback);  
+    }
+
+
+    /**
+     * Wait till the browser has finished loading everything and is in a ready state
+     * 
+     * @param completeCallback A method that will be executed once the browser is ready
+     */
+    waitTillBrowserReady(completeCallback: () => void){
+        
+        this.driver.wait(() => {
+            
+            return this.driver.executeScript('return document.readyState').then((readyState: any) => {
+                
+                return readyState === 'complete';
+            });
+            
+        }, this.waitTimeout).then(completeCallback);
+    }
+    
+    
+    /**
      * Request the browser instance to load the specified URL.
      * If we have defined any wildcard, they will be replaced on the url before requesting it on the browser.
      * 
@@ -139,18 +175,14 @@ export class AutomatedBrowserManager {
     loadUrl(url: string, completeCallback: (results: {title:string; source:any; finalUrl:string; browserLogs:any}) => void){
         
         let results: any = {};
-        
+    
         this.driver.get(this.stringTestsManager.replaceWildCardsOnText(url, this.wildcards)).then(() => {
             
             this.driver.getTitle().then((title: any) => {
             
                 results.title = title;
                 
-                this.driver.executeScript(() => {
-                    
-                    return document!.documentElement!.outerHTML;
-                  
-                }).then((html: string) => {
+                this.driver.executeScript("return document.documentElement.outerHTML").then((html: string) => {
                 
                     results.source = html;
 
@@ -162,7 +194,10 @@ export class AutomatedBrowserManager {
                             
                             results.browserLogs = browserLogs;
                             
-                            completeCallback(results);
+                            this.waitTillBrowserReady(() => {
+                                
+                                completeCallback(results);
+                            });
                         }); 
                     });
                 });
@@ -172,7 +207,29 @@ export class AutomatedBrowserManager {
     
     
     /**
-     * This method will test that all the provided urls redirect to another expected url.
+     * Check that the currently visible browser url contains the specified text
+     * 
+     * @param string A fragment of text that must be contained on the currently active browser url
+     * @param completeCallback A method that will be executed once the browser url is correctly verified
+     */
+    assertUrlContains(string: string, completeCallback: () => void){
+        
+        this.driver.wait(() => {
+            
+            return this.driver.executeScript('return window.location.href').then((browserUrl: any) => {
+                
+                return browserUrl.indexOf(string) >= 0;
+            });
+            
+        }, this.waitTimeout).then(completeCallback).catch((e:Error) => {
+            
+            throw new Error('Error with assertUrlContains. Expected: ' + string + '\nBut was not found on browser current url\n' +  e.toString());
+        });
+    }
+    
+    
+    /**
+     * Test that all the provided urls redirect to another expected url.
      * If any of the provided urls fail to redirect to its expected value, the test will fail.
      * 
      * @param urls An array of objects where each one contains the following properties:
@@ -235,8 +292,8 @@ export class AutomatedBrowserManager {
      *        "url" the url to test (mandatory)
      *        "title" A text that must exist on the browser title for the url once loaded (skip it or set it to null if not used)
      *        "source" A string or an array of strings with texts that must exist on the url source code (skip it or set it to null if not used)
-     *        "skipLogsTest" True if we want to avoid error messages when an error is detected on the browser
-     *                       console output for an url. If false or not specified, the console output will be always analyzed for errors
+     *        "ignoreConsoleErrors" The console output is always analyzed for errors. Any console error that happens will make the tests fail unless it contains
+     *                              any of the strings provided here
      *        "startWith" If defined, the loaded source code must start with the specified text (skip it or set it to null if not used)
      *        "endWith" If defined, the loaded source code must end with the specified text (skip it or set it to null if not used)
      *        "notContains" A string or an array of strings with texts tat must NOT exist on the url source code (skip it or set it to null if not used)
@@ -272,11 +329,24 @@ export class AutomatedBrowserManager {
             this.loadUrl(entry.url, (results) => {
                 
                 // Check that there are no SEVERE error logs on the browser
-                if(!entry.skipLogsTest){
-                    
-                    for (let logEntry of results.browserLogs) {
-                    
-                        if(logEntry.level.name === 'SEVERE'){
+                for (let logEntry of results.browserLogs) {
+                
+                    if(logEntry.level.name === 'SEVERE'){
+                        
+                        let errorMustBeThrown = true;
+                        
+                        if(ArrayUtils.isArray(entry.ignoreConsoleErrors)){
+                            
+                            for (let ignoreConsoleError of entry.ignoreConsoleErrors) {
+    
+                                if(logEntry.message.indexOf(ignoreConsoleError) >= 0){
+                                    
+                                    errorMustBeThrown = false;
+                                }
+                            }
+                        }
+                        
+                        if(errorMustBeThrown){
                             
                             anyErrors ++;
                             
@@ -364,6 +434,46 @@ export class AutomatedBrowserManager {
 
             this.quitWithError(e.message);
         }
+    }
+    
+    
+    /**
+     * Click on a document element  
+     * 
+     * @param id The html id for the element that we want to click on
+     * @param completeCallback A method that will be called once the specified element is found and a click is performed
+     */
+    clickById(id:string, completeCallback: () => void){
+        
+        this.driver.wait(this.webdriver.until.elementLocated(this.webdriver.By.id(id)), this.waitTimeout)
+            .then((element: any) => {
+            
+            element.click().then(completeCallback); 
+            
+        }).catch((e:Error) => {
+            
+            throw new Error('Error trying to click by id: ' + id + '\n' + e.toString());
+        });
+    }
+    
+    
+    /**
+     * Click on a document element
+     * 
+     * @param xpath The xpath query that lets us find element which we want to click
+     * @param completeCallback A method that will be called once the specified element is found and a click is performed
+     */
+    clickByXpath(xpath:string, completeCallback: () => void){
+    
+        this.driver.wait(this.webdriver.until.elementLocated(this.webdriver.By.xpath(xpath)), this.waitTimeout)
+            .then((element: any) => {
+            
+            element.click().then(completeCallback);
+        
+        }).catch((e:Error) => {
+            
+            throw new Error('Error trying to click by xpath: ' + xpath + '\n' + e.toString());
+        });
     }
     
     
