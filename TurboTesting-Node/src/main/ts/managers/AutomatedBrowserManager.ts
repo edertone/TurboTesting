@@ -8,7 +8,7 @@
  */
  
 
-import { ArrayUtils } from 'turbocommons-ts';
+import { ArrayUtils, ObjectUtils } from 'turbocommons-ts';
 import { ConsoleManager } from 'turbodepot-node';
 import { HTTPTestsManager } from './HTTPTestsManager';
 import { StringTestsManager } from './StringTestsManager';
@@ -204,29 +204,7 @@ export class AutomatedBrowserManager {
             });  
         });
     }
-    
-    
-    /**
-     * Check that the currently visible browser url contains the specified text
-     * 
-     * @param string A fragment of text that must be contained on the currently active browser url
-     * @param completeCallback A method that will be executed once the browser url is correctly verified
-     */
-    assertUrlContains(string: string, completeCallback: () => void){
         
-        this.driver.wait(() => {
-            
-            return this.driver.executeScript('return window.location.href').then((browserUrl: any) => {
-                
-                return browserUrl.indexOf(string) >= 0;
-            });
-            
-        }, this.waitTimeout).then(completeCallback).catch((e:Error) => {
-            
-            throw new Error('Error with assertUrlContains. Expected: ' + string + '\nBut was not found on browser current url\n' +  e.toString());
-        });
-    }
-    
     
     /**
      * Test that all the provided urls redirect to another expected url.
@@ -473,6 +451,148 @@ export class AutomatedBrowserManager {
         }).catch((e:Error) => {
             
             throw new Error('Error trying to click by xpath: ' + xpath + '\n' + e.toString());
+        });
+    }
+    
+    
+    /**
+     * Perform several tests regarding the current state of the browser: Verify the current url, title, html code,
+     * errors on console, etc..
+     * 
+     * If any of the specified assertions fails, an exception will be thrown
+     * 
+     * @param asserts An object that defines the assertions that will be applied by this test:
+     *        "url" A string or an array of strings with texts that must exist on the current browser url (skip it or set it to null if not used)
+     *        "titleContains" A text that must exist on the current browser title (skip it or set it to null if not used)
+     *        "ignoreConsoleErrors" The console output is analyzed for errors. Any console error that happens will make the tests fail unless it contains
+     *                              any of the strings provided here
+     *        "htmlContains" A string or an array of strings with texts that must exist on the html source code (skip it or set it to null if not used)
+     *        "htmlStartsWith" If defined, the html source code must start with the specified text (skip it or set it to null if not used)
+     *        "htmlEndsWith" If defined, the html source code must end with the specified text (skip it or set it to null if not used)
+     *        "htmlNotContains" A string or an array of strings with texts tat must NOT exist on the html source code (skip it or set it to null if not used)
+     * @param completeCallback A method that will be called once all the tests have been successfully executed on the current browser state
+     * 
+     * @return void
+     */
+    assertBrowserState(asserts: any,  completeCallback: () => void){
+        
+        let anyErrors = 0;
+        
+        // Check that asserts has the right properties
+        let assertKeys = ObjectUtils.getKeys(asserts);
+        
+        for (let assertKey of assertKeys) {
+
+            if(['url', 'titleContains', 'ignoreConsoleErrors',
+                'htmlContains', 'htmlStartsWith', 'htmlEndsWith', 'htmlNotContains']
+                    .indexOf(assertKey) < 0){
+                
+                throw new Error(`Unexpected assert property found: ${assertKey}`);
+            }
+        }
+        
+        // Replace wildcards on assert values
+        asserts.url = this.stringTestsManager.replaceWildCardsOnText(asserts.url, this.wildcards);
+        asserts.htmlContains = this.stringTestsManager.replaceWildCardsOnObject(asserts.htmlContains, this.wildcards);
+        
+        this.waitTillBrowserReady(() => {
+        
+            this.driver.executeScript('return window.location.href').then((browserUrl: any) => {
+                
+                if(asserts.url && asserts.url !== null &&
+                   !this.stringTestsManager.assertTextContainsAll(browserUrl, asserts.url,
+                        `Browser URL: ${browserUrl}\nDoes not contain expected text: $fragment`)){
+                    
+                    anyErrors ++;
+                }
+                
+                this.driver.getTitle().then((browserTitle: any) => {
+                    
+                    // Make sure no 404 error is shown at the browser title
+                    if(!this.stringTestsManager.assertTextNotContainsAny(browserTitle, ['404 Not Found', 'Error 404 page'],
+                            `Unexpected 404 error found on browser title:\n    ${browserTitle}\nFor the url:\n    ${browserUrl}`)){
+                    
+                        anyErrors ++;
+                    }
+                                    
+                    // Make sure title contains the text that is specified on the asserts expected values 
+                    if(asserts.titleContains && asserts.titleContains !== null &&
+                       !this.stringTestsManager.assertTextContainsAll(browserTitle, asserts.titleContains,
+                                `Title: ${browserTitle}\nDoes not contain expected text: ${asserts.titleContains}\nFor the url: ${browserUrl}`)){
+                    
+                        anyErrors ++;
+                    }
+                    
+                    this.driver.manage().logs().get('browser').then((browserLogs: any) => {
+
+                        // Check that there are no SEVERE error logs on the browser
+                        for (let logEntry of browserLogs) {
+                        
+                            if(logEntry.level.name === 'SEVERE'){
+                                
+                                let errorMustBeThrown = true;
+                                
+                                if(ArrayUtils.isArray(asserts.ignoreConsoleErrors)){
+                                    
+                                    for (let ignoreConsoleError of asserts.ignoreConsoleErrors) {
+            
+                                        if(logEntry.message.indexOf(ignoreConsoleError) >= 0){
+                                            
+                                            errorMustBeThrown = false;
+                                        }
+                                    }
+                                }
+                                
+                                if(errorMustBeThrown){
+                                    
+                                    anyErrors ++;
+                                    
+                                    this.consoleManager.error('Browser console has shown an error:\n    ' + logEntry.message + '\n' +
+                                        'For the url:\n    ' + browserUrl);
+                                }
+                            }
+                        }
+                        
+                        this.driver.executeScript("return document.documentElement.outerHTML").then((html: string) => {
+                        
+                            if(asserts.htmlStartsWith && asserts.htmlStartsWith !== null &&
+                                !this.stringTestsManager.assertTextStartsWith(html, asserts.htmlStartsWith,
+                                        `Source expected to start with: ${asserts.htmlStartsWith}\nBut started with: ${html.substr(0, 80)}\nFor the url: ${browserUrl}`)){
+                                   
+                                 anyErrors ++;
+                             }
+                             
+                             if(asserts.htmlEndsWith && asserts.htmlEndsWith !== null &&
+                                !this.stringTestsManager.assertTextEndsWith(html, asserts.htmlEndsWith,
+                                        `Source expected to end with: ${asserts.htmlEndsWith}\nBut ended with: ${html.slice(-80)}\nFor the url: ${browserUrl}`)){
+                               
+                                 anyErrors ++;
+                             }
+                             
+                             if(asserts.htmlNotContains && asserts.htmlNotContains !== null &&
+                                !this.stringTestsManager.assertTextNotContainsAny(html, asserts.htmlNotContains,
+                                        `Source NOT expected to contain: $fragment\nBut contained it for the url: ${browserUrl}`)){
+    
+                                 anyErrors ++;
+                             }
+                             
+                             if(asserts.htmlContains && asserts.htmlContains !== null &&
+                                !this.stringTestsManager.assertTextContainsAll(html, asserts.htmlContains,
+                                        `\nError searching for: $fragment on text in the url: ${browserUrl}\n$errorMsg\n`)){
+    
+                                 anyErrors ++;
+                             }
+                             
+                             if(anyErrors > 0){
+                                 
+                                 throw new Error(`AutomatedBrowserManager.assertBrowserState failed with ${anyErrors} errors`);
+                             }
+                             
+                             completeCallback();                         
+                        });
+                    });
+                });
+            });
         });
     }
     
