@@ -9,7 +9,6 @@
  
 
 import { ArrayUtils, ObjectUtils } from 'turbocommons-ts';
-import { ConsoleManager } from 'turbodepot-node';
 import { HTTPTestsManager } from './HTTPTestsManager';
 import { StringTestsManager } from './StringTestsManager';
 
@@ -41,12 +40,7 @@ export class AutomatedBrowserManager {
      * The selenium webdriver instance used to manage the browser automation
      */
     private driver: any = null;
-    
-    
-    /**
-     * The ConsoleManager instance used to perform console output
-     */
-    private consoleManager: ConsoleManager;
+
     
     /**
      * The StringTestsManager instance used to perform string tests
@@ -68,20 +62,15 @@ export class AutomatedBrowserManager {
      * @param execSync A node execSync module instance (const { execSync } = require('child_process'))
      * @param webdriver A node webdriver module instance (const webdriver = require('selenium-webdriver');)
      * @param chrome A node chrome module instance (const chrome = require('selenium-webdriver/chrome'))
-     * @param console An instance for the console process node object
-     * @param process An instance for the global process node object
      * 
      * @return An AutomatedBrowserManager instance
      */
     constructor(private execSync:any,
                 private webdriver:any,
-                private chrome:any,
-                console:any,
-                process:any) {
+                private chrome:any) {
 
-        this.stringTestsManager = new StringTestsManager(console, process);
-        this.consoleManager = new ConsoleManager(console, process);
-        this.httpTestsManager = new HTTPTestsManager(console, process);
+        this.stringTestsManager = new StringTestsManager();
+        this.httpTestsManager = new HTTPTestsManager();
     }
     
     
@@ -208,7 +197,7 @@ export class AutomatedBrowserManager {
     
     /**
      * Test that all the provided urls redirect to another expected url.
-     * If any of the provided urls fail to redirect to its expected value, the test will fail.
+     * If any of the provided urls fail to redirect to its expected value, the test will throw an exception.
      * 
      * @param urls An array of objects where each one contains the following properties:
      *        "url" the url to test
@@ -224,16 +213,16 @@ export class AutomatedBrowserManager {
             throw new Error('AutomatedBrowserManager.assertUrlsRedirect duplicate urls: ' + ArrayUtils.getDuplicateElements(urls.map(l => l.url)).join('\n'));
         }
         
-        let anyErrors = 0;
+        let anyErrors: string[] = [];
         
         // Load all the urls on the list and perform a request for each one.
         let recursiveCaller = (urls: any[], completeCallback: () => void) => {
             
             if(urls.length <= 0){
                 
-                if(anyErrors > 0){
+                if(anyErrors.length > 0){
                     
-                    throw new Error(`AutomatedBrowserManager.assertUrlsRedirect failed with ${anyErrors} errors`);
+                    throw new Error(`AutomatedBrowserManager.assertUrlsRedirect failed with ${anyErrors.length} errors:\n` + anyErrors.join('\n'));
                 }
                 
                 return completeCallback();
@@ -247,9 +236,7 @@ export class AutomatedBrowserManager {
                 
                 if(results.finalUrl !== entry.to){
                     
-                    anyErrors ++;
-                    
-                    this.consoleManager.error('Url redirect failed. expected:\n    ' + entry.url +
+                    anyErrors.push('Url redirect failed. expected:\n    ' + entry.url +
                         ' to redirect to:\n    ' + entry.to + ' but was:\n    ' + results.finalUrl);
                 }
                     
@@ -279,7 +266,7 @@ export class AutomatedBrowserManager {
      */
     assertUrlsLoadOk(urls: any[], completeCallback: () => void){
     
-        let anyErrors = 0;
+        let anyErrors: string[] = [];
         
         // Fail if list has duplicate values
         if(ArrayUtils.hasDuplicateElements(urls.map(l => l.url))){
@@ -292,12 +279,10 @@ export class AutomatedBrowserManager {
             
             if(urls.length <= 0){
                 
-                if(anyErrors > 0){
+                if(anyErrors.length > 0){
                     
-                    throw new Error(`AutomatedBrowserManager.assertUrlsLoadOk failed with ${anyErrors} errors`);
+                    throw new Error(`AutomatedBrowserManager.assertUrlsLoadOk failed with ${anyErrors.length} errors:\n` + anyErrors.join('\n'));
                 }
-                
-                return completeCallback();
             }
         
             let entry = urls.shift();
@@ -305,21 +290,10 @@ export class AutomatedBrowserManager {
             
             this.loadUrl(entry.url, () => {
                 
-                try {
-
-                    this.assertBrowserState(entry, () => {
-                        
-                        recursiveCaller(urls, completeCallback);
-                    });
-                    
-                } catch (e) {
-                
-                    anyErrors ++;
-                    
-                    this.consoleManager.error(e.toString() + '\n' + e.stack);
+                this.assertBrowserState(entry, () => {
                     
                     recursiveCaller(urls, completeCallback);
-                }                
+                });            
             });
         }
         
@@ -411,7 +385,7 @@ export class AutomatedBrowserManager {
      */
     assertBrowserState(asserts: any,  completeCallback: () => void){
         
-        let anyErrors = 0;
+        let anyErrors: string[] = [];
         
         // Check that asserts has the right properties
         let assertKeys = ObjectUtils.getKeys(asserts);
@@ -422,9 +396,7 @@ export class AutomatedBrowserManager {
                 'htmlContains', 'htmlStartsWith', 'htmlEndsWith', 'htmlNotContains']
                     .indexOf(assertKey) < 0){
                 
-                anyErrors ++;
-                
-                this.consoleManager.error(`Unexpected assert property found: ${assertKey}`);
+                anyErrors.push(`Unexpected assert property found: ${assertKey}`);
             }
         }
         
@@ -436,28 +408,44 @@ export class AutomatedBrowserManager {
         
             this.driver.executeScript('return window.location.href').then((browserUrl: any) => {
                 
-                if(asserts.url && asserts.url !== null &&
-                   !this.stringTestsManager.assertTextContainsAll(browserUrl, asserts.url,
-                        `Browser URL: ${browserUrl}\nDoes not contain expected text: $fragment`)){
+                if(asserts.url && asserts.url !== null){
                     
-                    anyErrors ++;
+                    try {
+
+                        this.stringTestsManager.assertTextContainsAll(browserUrl, asserts.url,
+                            `Browser URL: ${browserUrl}\nDoes not contain expected text: $fragment`);
+                             
+                    } catch (e) {
+                    
+                        anyErrors.push(e.toString());
+                    }
                 }
                 
                 this.driver.getTitle().then((browserTitle: any) => {
                     
                     // Make sure no 404 error is shown at the browser title
-                    if(!this.stringTestsManager.assertTextNotContainsAny(browserTitle, ['404 Not Found', 'Error 404 page'],
-                            `Unexpected 404 error found on browser title:\n    ${browserTitle}\nFor the url:\n    ${browserUrl}`)){
+                    try {
+
+                        this.stringTestsManager.assertTextNotContainsAny(browserTitle, ['404 Not Found', 'Error 404 page'],
+                            `Unexpected 404 error found on browser title:\n    ${browserTitle}\nFor the url:\n    ${browserUrl}`);
+                        
+                    } catch (e) {
                     
-                        anyErrors ++;
+                        anyErrors.push(e.toString());
                     }
                                     
                     // Make sure title contains the text that is specified on the asserts expected values 
-                    if(asserts.titleContains && asserts.titleContains !== null &&
-                       !this.stringTestsManager.assertTextContainsAll(browserTitle, asserts.titleContains,
-                                `Title: ${browserTitle}\nDoes not contain expected text: ${asserts.titleContains}\nFor the url: ${browserUrl}`)){
+                    if(asserts.titleContains && asserts.titleContains !== null){
                     
-                        anyErrors ++;
+                        try {
+                            
+                            this.stringTestsManager.assertTextContainsAll(browserTitle, asserts.titleContains,
+                                `Title: ${browserTitle}\nDoes not contain expected text: ${asserts.titleContains}\nFor the url: ${browserUrl}`);
+                                 
+                        } catch (e) {
+                        
+                            anyErrors.push(e.toString());
+                        }
                     }
                     
                     this.driver.manage().logs().get('browser').then((browserLogs: any) => {
@@ -482,9 +470,7 @@ export class AutomatedBrowserManager {
                                 
                                 if(errorMustBeThrown){
                                     
-                                    anyErrors ++;
-                                    
-                                    this.consoleManager.error('Browser console has shown an error:\n    ' + logEntry.message + '\n' +
+                                    anyErrors.push('Browser console has shown an error:\n    ' + logEntry.message + '\n' +
                                         'For the url:\n    ' + browserUrl);
                                 }
                             }
@@ -492,37 +478,61 @@ export class AutomatedBrowserManager {
                         
                         this.driver.executeScript("return document.documentElement.outerHTML").then((html: string) => {
                         
-                            if(asserts.htmlStartsWith && asserts.htmlStartsWith !== null &&
-                                !this.stringTestsManager.assertTextStartsWith(html, asserts.htmlStartsWith,
-                                        `Source expected to start with: ${asserts.htmlStartsWith}\nBut started with: ${html.substr(0, 80)}\nFor the url: ${browserUrl}`)){
-                                   
-                                 anyErrors ++;
+                            if(asserts.htmlStartsWith && asserts.htmlStartsWith !== null){
+                                
+                                try {
+
+                                    this.stringTestsManager.assertTextStartsWith(html, asserts.htmlStartsWith,
+                                        `Source expected to start with: $fragment\nBut started with: $startedWith\nFor the url: ${browserUrl}`);
+                                    
+                                } catch (e) {
+
+                                    anyErrors.push(e.toString());
+                                }
                              }
                              
-                             if(asserts.htmlEndsWith && asserts.htmlEndsWith !== null &&
-                                !this.stringTestsManager.assertTextEndsWith(html, asserts.htmlEndsWith,
-                                        `Source expected to end with: ${asserts.htmlEndsWith}\nBut ended with: ${html.slice(-80)}\nFor the url: ${browserUrl}`)){
+                             if(asserts.htmlEndsWith && asserts.htmlEndsWith !== null){
                                
-                                 anyErrors ++;
+                                 try {
+
+                                     this.stringTestsManager.assertTextEndsWith(html, asserts.htmlEndsWith,
+                                         `Source expected to end with: $fragment\nBut ended with: $endedWith\nFor the url: ${browserUrl}`);
+                                     
+                                 } catch (e) {
+                                     
+                                     anyErrors.push(e.toString());
+                                 }
                              }
                              
-                             if(asserts.htmlNotContains && asserts.htmlNotContains !== null &&
-                                !this.stringTestsManager.assertTextNotContainsAny(html, asserts.htmlNotContains,
-                                        `Source NOT expected to contain: $fragment\nBut contained it for the url: ${browserUrl}`)){
-    
-                                 anyErrors ++;
-                             }
-                             
-                             if(asserts.htmlContains && asserts.htmlContains !== null &&
-                                !this.stringTestsManager.assertTextContainsAll(html, asserts.htmlContains,
-                                        `\nError searching for: $fragment on text in the url: ${browserUrl}\n$errorMsg\n`)){
-    
-                                 anyErrors ++;
-                             }
-                             
-                             if(anyErrors > 0){
+                             if(asserts.htmlNotContains && asserts.htmlNotContains !== null){
                                  
-                                 throw new Error(`AutomatedBrowserManager.assertBrowserState failed with ${anyErrors} errors`);
+                                 try {
+
+                                     this.stringTestsManager.assertTextNotContainsAny(html, asserts.htmlNotContains,
+                                         `Source NOT expected to contain: $fragment\nBut contained it for the url: ${browserUrl}`);
+                                     
+                                 } catch (e) {
+                                     
+                                     anyErrors.push(e.toString());
+                                 }
+                             }
+                             
+                             if(asserts.htmlContains && asserts.htmlContains !== null){
+    
+                                 try {
+                                     
+                                     this.stringTestsManager.assertTextContainsAll(html, asserts.htmlContains,
+                                         `\nError searching for: $fragment on text in the url: ${browserUrl}\n$errorMsg\n`);
+                                          
+                                 } catch (e) {
+                                 
+                                     anyErrors.push(e.toString());
+                                 }
+                             }
+                             
+                             if(anyErrors.length > 0){
+                                 
+                                 throw new Error(`AutomatedBrowserManager.assertBrowserState failed with ${anyErrors.length} errors:\n` + anyErrors.join('\n'));
                              }
                              
                              completeCallback();                         

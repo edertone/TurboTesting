@@ -9,7 +9,6 @@
 
 
 import { ArrayUtils, HTTPManagerGetRequest, HTTPManager, HTTPManagerPostRequest, HTTPManagerBaseRequest, ObjectUtils } from 'turbocommons-ts';
-import { ConsoleManager } from 'turbodepot-node';
 import { StringTestsManager } from './StringTestsManager';
 
 
@@ -42,25 +41,13 @@ export class HTTPTestsManager {
 
     
     /**
-     * The ConsoleManager instance used to perform console output
-     */
-    private consoleManager: ConsoleManager;
-
-    
-    /**
      * Class that helps with the process of testing http requests and operations
-     * 
-     * This constructor requires some node modules to work, which are passed as dependencies
      *  
-     * @param console An instance for the console process node object
-     * @param process An instance for the global process node object
-     * 
      * @return A HTTPTestsManager instance
      */
-    constructor(console:any, process:any) {
+    constructor() {
         
-        this.stringTestsManager = new StringTestsManager(console, process);
-        this.consoleManager = new ConsoleManager(console, process);
+        this.stringTestsManager = new StringTestsManager();
     }
 
     
@@ -80,16 +67,16 @@ export class HTTPTestsManager {
             throw new Error('AutomatedBrowserManager.assertUrlsFail duplicate urls: ' + ArrayUtils.getDuplicateElements(urls).join('\n'));
         }
         
-        let anyErrors = 0;
+        let anyErrors: string[] = [];
         
         // Perform a recursive execution for all the provided urls
         let recursiveCaller = (urls: string[], completeCallback: () => void) => {
             
             if(urls.length <= 0){
                 
-                if(anyErrors > 0){
+                if(anyErrors.length > 0){
                     
-                    throw new Error(`AutomatedBrowserManager.assertUrlsFail failed with ${anyErrors} errors`);
+                    throw new Error(`AutomatedBrowserManager.assertUrlsFail failed with ${anyErrors.length} errors:\n` + anyErrors.join('\n'));
                 }
                 
                 return completeCallback();
@@ -106,9 +93,7 @@ export class HTTPTestsManager {
             
             request.successCallback = () => {
             
-                anyErrors ++;
-                    
-                this.consoleManager.error(`URL expected to fail with 404 but was 200 ok: ${url}`);
+                anyErrors.push(`URL expected to fail with 404 but was 200 ok: ${url}`);
             
                 recursiveCaller(urls, completeCallback);
             };
@@ -153,16 +138,16 @@ export class HTTPTestsManager {
             throw new Error('HTTPTestsManager.assertHttpRequests duplicate urls: ' + ArrayUtils.getDuplicateElements(urls.map(l => l.url)).join('\n'));
         }
         
-        let anyErrors = 0;
+        let anyErrors: string[] = [];
         
         // Perform a recursive execution for all the provided urls
         let recursiveCaller = (urls: any[], completeCallback: () => void) => {
             
             if(urls.length <= 0){
                 
-                if(anyErrors > 0){
+                if(anyErrors.length > 0){
                     
-                    throw new Error(`HTTPTestsManager.assertHttpRequests failed with ${anyErrors} errors`);
+                    throw new Error(`HTTPTestsManager.assertHttpRequests failed with ${anyErrors} errors:\n` + anyErrors.join('\n'));
                 }
                 
                 return completeCallback();
@@ -188,45 +173,63 @@ export class HTTPTestsManager {
             
             request.errorCallback = (errorMsg: string) => {
             
-                anyErrors ++;
-                
-                this.consoleManager.error(`Could not load url: ${entry.url}\n${errorMsg}`);
+                anyErrors.push(`Could not load url: ${entry.url}\n${errorMsg}`);
 
                 recursiveCaller(urls, completeCallback);
             };
             
             request.successCallback = (response: any) => {
 
-                if(entry.contains &&
-                   entry.contains !== null &&
-                   !this.stringTestsManager.assertTextContainsAll(response, entry.contains,
-                           `Response expected to contain: $fragment\nBut not contained it for the url: ${entry.url}`)){
+                if(entry.contains && entry.contains !== null){
 
-                    anyErrors ++;
+                    try {
+                        
+                        this.stringTestsManager.assertTextContainsAll(response, entry.contains,
+                            `Response expected to contain: $fragment\nBut not contained it for the url: ${entry.url}`);
+                             
+                    } catch (e) {
+                    
+                        anyErrors.push(e.toString());
+                    }
                 }
                 
-                if(entry.startWith &&
-                   entry.startWith !== null &&
-                   !this.stringTestsManager.assertTextStartsWith(response, entry.startWith,
-                           `Response expected to start with: $fragment\nBut started with: ${response.substr(0, 40)}\nFor the url: ${entry.url}`)){
-                     
-                     anyErrors ++;
-                 }
-                 
-                 if(entry.endWith && 
-                    entry.endWith !== null &&
-                    !this.stringTestsManager.assertTextEndsWith(response, entry.endWith,
-                            `Response expected to end with: $fragment\nBut ended with: ${response.slice(-40)}\nFor the url: ${entry.url}`)){
-                      
-                     anyErrors ++;
-                 }
-                 
-                 if(entry.notContains &&
-                    entry.notContains !== null &&
-                    !this.stringTestsManager.assertTextNotContainsAny(response, entry.notContains,
-                            `Response NOT expected to contain: $fragment\nBut contained it for the url: ${entry.url}`)){
+                if(entry.startWith && entry.startWith !== null){
+                    
+                    try {
 
-                     anyErrors ++;
+                        this.stringTestsManager.assertTextStartsWith(response, entry.startWith,
+                            `Response expected to start with: $fragment\nBut started with: $startedWith\nFor the url: ${entry.url}`);
+                        
+                    } catch (e) {
+
+                        anyErrors.push(e.toString());
+                    }                    
+                 }
+                 
+                 if(entry.endWith && entry.endWith !== null){
+                     
+                     try {
+
+                         this.stringTestsManager.assertTextEndsWith(response, entry.endWith,
+                             `Response expected to end with: $fragment\nBut ended with: $endedWith\nFor the url: ${entry.url}`);
+                                 
+                     } catch (e) {
+                    
+                         anyErrors.push(e.toString());
+                     }
+                 }
+                 
+                 if(entry.notContains && entry.notContains !== null){
+                     
+                     try {
+
+                         this.stringTestsManager.assertTextNotContainsAny(response, entry.notContains,
+                             `Response NOT expected to contain: $fragment\nBut contained it for the url: ${entry.url}`);
+                                 
+                     } catch (e) {
+                    
+                         anyErrors.push(e.toString());
+                     }
                  }
                  
                  recursiveCaller(urls, completeCallback);
