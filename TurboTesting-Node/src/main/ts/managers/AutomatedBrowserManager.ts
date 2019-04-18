@@ -283,6 +283,8 @@ export class AutomatedBrowserManager {
                     
                     throw new Error(`AutomatedBrowserManager.assertUrlsLoadOk failed with ${anyErrors.length} errors:\n` + anyErrors.join('\n'));
                 }
+                
+                return completeCallback();
             }
         
             let entry = urls.shift();
