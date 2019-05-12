@@ -8,7 +8,7 @@
  */
  
 
-import { ArrayUtils, ObjectUtils } from 'turbocommons-ts';
+import { ArrayUtils, ObjectUtils, HTTPManager, HTTPManagerGetRequest } from 'turbocommons-ts';
 import { HTTPTestsManager } from './HTTPTestsManager';
 import { StringTestsManager } from './StringTestsManager';
 
@@ -46,6 +46,12 @@ export class AutomatedBrowserManager {
      * The StringTestsManager instance used to perform string tests
      */
     private stringTestsManager: StringTestsManager;
+    
+    
+    /**
+     * The HTTPManager instance used to perform http requests
+     */
+    private httpManager: HTTPManager = new HTTPManager();
     
     
     /**
@@ -478,8 +484,15 @@ export class AutomatedBrowserManager {
                             }
                         }
                         
-                        this.driver.executeScript("return document.documentElement.outerHTML").then((html: string) => {
+                        let request = new HTTPManagerGetRequest(browserUrl);
                         
+                        request.errorCallback = () => {
+                        
+                            anyErrors.push('Could not load url: ' + browserUrl);
+                        };
+                        
+                        request.successCallback = (html: any) => {
+                           
                             if(asserts.htmlStartsWith && asserts.htmlStartsWith !== null){
                                 
                                 try {
@@ -538,7 +551,9 @@ export class AutomatedBrowserManager {
                              }
                              
                              completeCallback();                         
-                        });
+                        };
+                        
+                        this.httpManager.execute(request);
                     });
                 });
             });
