@@ -40,7 +40,15 @@ export class StringTestsManager {
         
         let result = text;
         
-        for (let wildcard of ObjectUtils.getKeys(wildcards)) {
+        let wildCardNames = ObjectUtils.getKeys(wildcards);
+        
+        // Sort the wildcard keys by string length, so the longer ones are replaced first
+        wildCardNames.sort((a, b) => {
+        
+            return b.length - a.length;
+        });
+        
+        for (let wildcard of wildCardNames) {
     
             result = StringUtils.replace(result, wildcard, wildcards[wildcard]);
         }

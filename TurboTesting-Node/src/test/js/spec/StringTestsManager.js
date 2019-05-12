@@ -23,6 +23,21 @@ describe('StringTestsManager', function() {
         
     });
     
+    
+    it('should correctly replace wildcards on text with replaceWildCardsOnText method', function() {
+
+        expect(this.sut.replaceWildCardsOnText('$a $bb $ccc', {$a: "1", $bb: "2", $ccc: "3"})).toBe('1 2 3');
+        
+        expect(this.sut.replaceWildCardsOnText('$a $a $aaa $aa', {$a: "1", $aa: "2", $aaa: "3"})).toBe('1 1 3 2');
+        
+        expect(this.sut.replaceWildCardsOnText('some text with $a $host wildcards', {$a: "1", $host: "google.com"}))
+            .toBe('some text with 1 google.com wildcards');
+            
+        expect(this.sut.replaceWildCardsOnText('some text with $a $host wildcards', {$host: "google.com"}))
+            .toBe('some text with $a google.com wildcards');
+    });
+    
+    
     it('should correctly run assertTextContainsAll when strict order is true', function() {
 
         expect(() => {this.sut.assertTextContainsAll('hello', ['h', 'e', 'o'])}).not.toThrow();

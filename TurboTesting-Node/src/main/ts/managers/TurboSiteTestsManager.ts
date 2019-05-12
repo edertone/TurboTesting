@@ -52,7 +52,7 @@ export class TurboSiteTestsManager {
     
     
     /**
-     * TODO
+     * TODO - Finish this method and document it
      */
     getWildcards(){
         
@@ -67,8 +67,14 @@ export class TurboSiteTestsManager {
         // Projectname fails here if we are testing a release compiled version
         // let projectName = turboBuilderSetup.metadata.name;
         
+        // TODO - the way in which we are obtaining the $hostRoot value should be improved cause it 
+        // uses several splits that may give wrong values some time... It should be better to use the StringUtils
+        // getHostNameFromUrl method, but it now only works with browsers cause it relies on the anchor element to
+        // obtain the hostname. We should first fix the StringUtils method and then use it here.
+        
         return {
             "$host": turboBuilderSetup.sync.remoteUrl.split('://')[1],
+            "$hostRoot": turboBuilderSetup.sync.remoteUrl.split('://')[1].split('/')[0],
             "$locale": turboSiteSetup.locales[0].split('_')[0],
             "$homeView": turboSiteSetup.homeView,
             "$cacheHash": 'TODO - how to find this?',
