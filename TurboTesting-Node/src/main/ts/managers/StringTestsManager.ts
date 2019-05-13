@@ -182,7 +182,7 @@ export class StringTestsManager {
         
         if(anyErrors.length > 0){
             
-            throw new Error(`AutomatedBrowserManager.assertTextContainsAll failed with ${anyErrors.length} errors:\n` +
+            throw new Error(`StringTestsManager.assertTextContainsAll failed with ${anyErrors.length} errors:\n` +
                     anyErrors.join('\n'));
         }
     }
@@ -222,7 +222,7 @@ export class StringTestsManager {
         
         if(anyErrors.length > 0){
             
-            throw new Error(`AutomatedBrowserManager.assertTextNotContainsAny failed with ${anyErrors.length} errors\n` +
+            throw new Error(`StringTestsManager.assertTextNotContainsAny failed with ${anyErrors.length} errors\n` +
                     anyErrors.join('\n'));
         }
     }

@@ -43,10 +43,10 @@ describe('StringTestsManager', function() {
         expect(() => {this.sut.assertTextContainsAll('hello', ['h', 'e', 'o'])}).not.toThrow();
         
         expect(() => {this.sut.assertTextContainsAll('hello', ['e', 'h'])})
-            .toThrowError(Error, /AutomatedBrowserManager.assertTextContainsAll failed with 1 errors/);
+            .toThrowError(Error, /StringTestsManager.assertTextContainsAll failed with 1 errors/);
         
         expect(() => {this.sut.assertTextContainsAll('hello world again for', ['for', 'hello', 'again'])})
-            .toThrowError(Error, /AutomatedBrowserManager.assertTextContainsAll failed with 2 errors/);
+            .toThrowError(Error, /StringTestsManager.assertTextContainsAll failed with 2 errors/);
         
         expect(() => {this.sut.assertTextContainsAll('hello', ['h', 'l', 'o'])}).not.toThrow();
         
@@ -66,10 +66,10 @@ describe('StringTestsManager', function() {
         expect(() => {this.sut.assertTextNotContainsAny('hello', ['Q', 'w', 'A'])}).not.toThrow();
         
         expect(() => {this.sut.assertTextNotContainsAny('hello', ['e', 'X'])})
-            .toThrowError(Error, /AutomatedBrowserManager.assertTextNotContainsAny failed with 1 errors/);
+            .toThrowError(Error, /StringTestsManager.assertTextNotContainsAny failed with 1 errors/);
         
         expect(() => {this.sut.assertTextNotContainsAny('hello world again for', ['for', 'GOGO', 'again'])})
-            .toThrowError(Error, /AutomatedBrowserManager.assertTextNotContainsAny failed with 2 errors/);
+            .toThrowError(Error, /StringTestsManager.assertTextNotContainsAny failed with 2 errors/);
         
         expect(() => {this.sut.assertTextNotContainsAny('hello', ['H', 'R', 't'])}).not.toThrow();
     });
