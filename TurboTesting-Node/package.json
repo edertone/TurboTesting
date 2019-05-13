@@ -1,6 +1,6 @@
 {
   "name": "turbotesting-node",
-  "version": "5.2.0",
+  "version": "6.0.0",
   "description": "General purpose cross-language library to improve automated testing productivity",
   "main": "index.js",
   "types": "index.d.ts",
@@ -12,8 +12,8 @@
     "url": "https://github.com/edertone/TurboTesting"
   },
   "dependencies": {
-    "turbocommons-ts": "^1.1.0",
-    "turbodepot-node": "^1.0.0"
+    "turbocommons-ts": "^2.1.0",
+    "turbodepot-node": "^2.0.0"
   },
   "keywords": [
     "automated",

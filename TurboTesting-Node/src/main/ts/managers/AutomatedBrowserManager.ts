@@ -45,7 +45,7 @@ export class AutomatedBrowserManager {
     /**
      * The StringTestsManager instance used to perform string tests
      */
-    private stringTestsManager: StringTestsManager;
+    private stringTestsManager: StringTestsManager = new StringTestsManager();
     
     
     /**
@@ -57,7 +57,7 @@ export class AutomatedBrowserManager {
     /**
      * The httpTestsManager instance used to perform http request tests
      */
-    private httpTestsManager: HTTPTestsManager;
+    private httpTestsManager: HTTPTestsManager = new HTTPTestsManager();
     
     
     /**
@@ -74,9 +74,6 @@ export class AutomatedBrowserManager {
     constructor(private execSync:any,
                 private webdriver:any,
                 private chrome:any) {
-
-        this.stringTestsManager = new StringTestsManager();
-        this.httpTestsManager = new HTTPTestsManager();
     }
     
     
@@ -484,11 +481,14 @@ export class AutomatedBrowserManager {
                             }
                         }
                         
+                        // Perform an http request to get the url real code. If we use selenium to read this information, the obtained html code
+                        // will not be the real one that was returned by the server, cause the browser alters the html elements after parsing them.
+                        // We want to test the exact real html code instead of the one that's altered by the browser
                         let request = new HTTPManagerGetRequest(browserUrl);
                         
-                        request.errorCallback = () => {
+                        request.errorCallback = (errorMsg: string, errorCode: number) => {
                         
-                            anyErrors.push('Could not load url: ' + browserUrl);
+                            anyErrors.push('Could not load url: ' + browserUrl + '\nError code: ' + errorCode + '\n' + errorMsg);
                         };
                         
                         request.successCallback = (html: any) => {
@@ -544,13 +544,16 @@ export class AutomatedBrowserManager {
                                      anyErrors.push(e.toString());
                                  }
                              }
-                             
-                             if(anyErrors.length > 0){
-                                 
-                                 throw new Error(`AutomatedBrowserManager.assertBrowserState failed with ${anyErrors.length} errors:\n` + anyErrors.join('\n'));
-                             }
-                             
-                             completeCallback();                         
+                        };
+                        
+                        request.finallyCallback = () => {
+                            
+                            if(anyErrors.length > 0){
+                                
+                                throw new Error(`AutomatedBrowserManager.assertBrowserState failed with ${anyErrors.length} errors:\n` + anyErrors.join('\n'));
+                            }
+                            
+                            completeCallback();
                         };
                         
                         this.httpManager.execute(request);

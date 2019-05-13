@@ -11,6 +11,10 @@
 import { ArrayUtils, HTTPManagerGetRequest, HTTPManager, HTTPManagerPostRequest, HTTPManagerBaseRequest, ObjectUtils } from 'turbocommons-ts';
 import { StringTestsManager } from './StringTestsManager';
 
+declare let process: any;
+declare let global: any;
+declare function require(name: string): any;
+
 
 /**
  * HTTPTestsManager class
@@ -48,6 +52,22 @@ export class HTTPTestsManager {
     constructor() {
         
         this.stringTestsManager = new StringTestsManager();
+        
+        // Make sure the XMLHttpRequest class is available. If not, initialize it from the xhr2 library
+        try {
+
+            new XMLHttpRequest();
+            
+        } catch (e) {
+
+            // HTTPManager class requires XMLHttpRequest which is only available on browser but not on node.
+            // The xhr2 library emulates this class so it can be used on nodejs projects. We declare it globally here
+            global.XMLHttpRequest = require('xhr2');
+            
+            // This value is set to disable the SSL bad certificate errors on nodejs which would make some http requests
+            // fail with no error message
+            process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = 0;
+        }
     }
 
     

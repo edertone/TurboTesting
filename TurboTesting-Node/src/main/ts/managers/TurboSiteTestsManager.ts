@@ -29,25 +29,13 @@ export class TurboSiteTestsManager {
     /**
      * Class with methods that help when testing Turbosite-Php projects
      * 
-     * This constructor requires some node modules to work, which are passed as dependencies
-     *  
      * @param projectRootPath Full filesystem path to the root of the project we are testing
-     * @param fs A node fs module instance (const fs = require('fs'))
-     * @param os A node os module instance (const os = require('os'))
-     * @param path A node path module instance (const path = require('path'))
-     * @param process A node process module instance
-     * @param crypto A node crypto module instance (const crypto = require('crypto'))
      * 
      * @return A TurboSiteTestsManager instance
      */
-    constructor(private projectRootPath:string,
-                fs:any,
-                os:any,
-                path:any,
-                process: any,
-                crypto: any) {
+    constructor(private projectRootPath:string) {
         
-        this.filesManager = new FilesManager(fs, os, path, process, crypto);
+        this.filesManager = new FilesManager();
     }
     
     
