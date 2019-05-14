@@ -12,6 +12,8 @@ import { ArrayUtils, ObjectUtils, HTTPManager, HTTPManagerGetRequest } from 'tur
 import { HTTPTestsManager } from './HTTPTestsManager';
 import { StringTestsManager } from './StringTestsManager';
 
+declare function require(name: string): any;
+
 
 /**
  * AutomatedBrowserManager class
@@ -61,19 +63,33 @@ export class AutomatedBrowserManager {
     
     
     /**
+     * Stores the NodeJs execSync instance
+     */
+    private execSync: any;
+    
+    
+    /**
+     * Stores the NodeJs webdriver instance
+     */
+    private webdriver: any;
+    
+    
+    /**
+     * Stores the NodeJs webdriver chrome instance
+     */
+    private chrome: any;
+    
+    
+    /**
      * Browser automated testing management class
-     * 
-     * This constructor requires some node modules to work, which are passed as dependencies
-     *  
-     * @param execSync A node execSync module instance (const { execSync } = require('child_process'))
-     * @param webdriver A node webdriver module instance (const webdriver = require('selenium-webdriver');)
-     * @param chrome A node chrome module instance (const chrome = require('selenium-webdriver/chrome'))
      * 
      * @return An AutomatedBrowserManager instance
      */
-    constructor(private execSync:any,
-                private webdriver:any,
-                private chrome:any) {
+    constructor() {
+        
+        this.execSync = require('child_process').execSync;
+        this.webdriver = require('selenium-webdriver');
+        this.chrome = require('selenium-webdriver/chrome');
     }
     
     
