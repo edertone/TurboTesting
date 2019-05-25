@@ -8,7 +8,7 @@
  */
 
 
-import { ArrayUtils, HTTPManagerGetRequest, HTTPManager, HTTPManagerPostRequest, HTTPManagerBaseRequest, ObjectUtils } from 'turbocommons-ts';
+import { ArrayUtils, StringUtils,HTTPManagerGetRequest, HTTPManager, HTTPManagerPostRequest, HTTPManagerBaseRequest, ObjectUtils } from 'turbocommons-ts';
 import { StringTestsManager } from './StringTestsManager';
 
 declare let process: any;
@@ -81,6 +81,11 @@ export class HTTPTestsManager {
      */
     assertUrlsFail(urls: string[], completeCallback: () => void){
         
+        if(!ArrayUtils.isArray(urls)){
+            
+            throw new Error('urls parameter must be an array');
+        }
+
         // Fail if list has duplicate values
         if(ArrayUtils.hasDuplicateElements(urls)){
             
@@ -141,6 +146,11 @@ export class HTTPTestsManager {
      */
     assertHttpRequests(urls: any[], completeCallback: () => void){
     
+        if(!ArrayUtils.isArray(urls)){
+            
+            throw new Error('urls parameter must be an array');
+        }
+        
         // Fail if list has duplicate values
         if(ArrayUtils.hasDuplicateElements(urls.map((l) => {
             
@@ -205,7 +215,7 @@ export class HTTPTestsManager {
                     try {
                         
                         this.stringTestsManager.assertTextContainsAll(response, entry.contains,
-                            `Response expected to contain: $fragment\nBut not contained it for the url: ${entry.url}`);
+                            `Response expected to contain: $fragment\nBut not contained it for the url: ${entry.url} which started with: \n${StringUtils.limitLen(response, 500)}\n\n`);
                              
                     } catch (e) {
                     
