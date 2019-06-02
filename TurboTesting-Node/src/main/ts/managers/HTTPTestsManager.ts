@@ -10,6 +10,7 @@
 
 import { ArrayUtils, StringUtils,HTTPManagerGetRequest, HTTPManager, HTTPManagerPostRequest, HTTPManagerBaseRequest, ObjectUtils } from 'turbocommons-ts';
 import { StringTestsManager } from './StringTestsManager';
+import { ObjectTestsManager } from './ObjectTestsManager';
 
 declare let process: any;
 declare let global: any;
@@ -41,7 +42,13 @@ export class HTTPTestsManager {
     /**
      * The StringTestsManager instance used to perform string tests
      */
-    private stringTestsManager: StringTestsManager;
+    private stringTestsManager: StringTestsManager = new StringTestsManager();
+
+    
+    /**
+     * The ObjectTestsManager instance used to perform object tests
+     */
+    private objectTestsManager: ObjectTestsManager = new ObjectTestsManager();
 
     
     /**
@@ -50,9 +57,7 @@ export class HTTPTestsManager {
      * @return A HTTPTestsManager instance
      */
     constructor() {
-        
-        this.stringTestsManager = new StringTestsManager();
-        
+                
         // Make sure the XMLHttpRequest class is available. If not, initialize it from the xhr2 library
         try {
 
@@ -138,6 +143,7 @@ export class HTTPTestsManager {
      * @param urls An array of objects where each one contains the following properties:
      *        "url" the url to test
      *        "postParameters" If defined, an object containing key pair values that will be sent as POST parameters to the url. If this property does not exist, the request will be a GET one.
+     *        "is" If defined, the url response must be exactly the specified string
      *        "contains" A string or an array of strings with texts that must exist on the url response (or null if not used)
      *        "startWith" If defined, the url response must start with the specified text (or null if not used)
      *        "endWith" If defined, the url response must end with the specified text (or null if not used)
@@ -185,6 +191,17 @@ export class HTTPTestsManager {
             
             let entry = urls.shift();
             
+            // Check that the provided entry object is correct
+            try {
+                
+                this.objectTestsManager.assertObjectProperties(entry,
+                        ["url", "postParameters", "is", "contains", "startWith", "endWith", "notContains"], false);
+                     
+            } catch (e) {
+            
+                anyErrors.push(e.toString());
+            }
+            
             entry.url = this.stringTestsManager.replaceWildCardsOnText(entry.url, this.wildcards);
             entry.contains = this.stringTestsManager.replaceWildCardsOnObject(entry.contains, this.wildcards);
             
@@ -209,6 +226,11 @@ export class HTTPTestsManager {
             };
             
             request.successCallback = (response: any) => {
+                
+                if(entry.is && entry.is !== null && response !== entry.is){
+                       
+                    anyErrors.push(`Response for the url: ${entry.url} was expected to be:\n${entry.is}\nBut was:\n${StringUtils.limitLen(response, 500)}\n\n`);
+                }
 
                 if(entry.contains && entry.contains !== null){
 

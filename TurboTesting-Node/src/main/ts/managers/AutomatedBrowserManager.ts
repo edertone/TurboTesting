@@ -8,9 +8,10 @@
  */
  
 
-import { ArrayUtils, ObjectUtils, HTTPManager, HTTPManagerGetRequest } from 'turbocommons-ts';
+import { ArrayUtils, HTTPManager, HTTPManagerGetRequest } from 'turbocommons-ts';
 import { HTTPTestsManager } from './HTTPTestsManager';
 import { StringTestsManager } from './StringTestsManager';
+import { ObjectTestsManager } from './ObjectTestsManager';
 
 declare function require(name: string): any;
 
@@ -48,6 +49,12 @@ export class AutomatedBrowserManager {
      * The StringTestsManager instance used to perform string tests
      */
     private stringTestsManager: StringTestsManager = new StringTestsManager();
+    
+    
+    /**
+     * The ObjectTestsManager instance used to perform object tests
+     */
+    private objectTestsManager: ObjectTestsManager = new ObjectTestsManager();
     
     
     /**
@@ -409,16 +416,15 @@ export class AutomatedBrowserManager {
         let anyErrors: string[] = [];
         
         // Check that asserts has the right properties
-        let assertKeys = ObjectUtils.getKeys(asserts);
+        try {
+            
+            this.objectTestsManager.assertObjectProperties(asserts,
+                    ['url', 'titleContains', 'ignoreConsoleErrors', 'htmlContains',
+                     'htmlStartsWith', 'htmlEndsWith', 'htmlNotContains'], false);
+                 
+        } catch (e) {
         
-        for (let assertKey of assertKeys) {
-
-            if(['url', 'titleContains', 'ignoreConsoleErrors',
-                'htmlContains', 'htmlStartsWith', 'htmlEndsWith', 'htmlNotContains']
-                    .indexOf(assertKey) < 0){
-                
-                anyErrors.push(`Unexpected assert property found: ${assertKey}`);
-            }
+            anyErrors.push(e.toString());
         }
         
         // Replace wildcards on assert values

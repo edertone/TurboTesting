@@ -10,7 +10,7 @@
 const { StringTestsManager } = require('./../../../../target/turbotesting-node/dist/ts/index');
 
 
-describe('StringTestsManager', function() {
+describe('StringTestsManagerTest', function() {
     
     beforeEach(function() {
         

@@ -1,6 +1,6 @@
 {
   "name": "turbotesting-node",
-  "version": "6.1.0",
+  "version": "6.2.0",
   "description": "General purpose cross-language library to improve automated testing productivity",
   "main": "index.js",
   "types": "index.d.ts",
