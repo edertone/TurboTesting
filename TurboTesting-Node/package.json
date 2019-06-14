@@ -5,13 +5,15 @@
   "main": "index.js",
   "types": "index.d.ts",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node node_modules/jasmine/bin/jasmine --config=src/test/js/jasmine.json",
+    "test-debug": "node --inspect-brk node_modules/jasmine/bin/jasmine --config=src/test/js/jasmine.json"
   },
   "repository": {
     "type": "git",
     "url": "https://github.com/edertone/TurboTesting"
   },
   "dependencies": {
+    "jasmine": "^3.4.0",
     "selenium-webdriver": "^4.0.0-alpha.1",
     "turbocommons-ts": "^2.1.0",
     "turbodepot-node": "^2.0.0",

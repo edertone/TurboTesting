@@ -5,7 +5,7 @@
 	"metadata": {
 		"name": "turbotesting-node",
 		"description": "General purpose cross-language library to improve automated testing productivity",
-		"builderVersion": "2.0.0"
+		"builderVersion": "2.1.0"
 	},
 	
 	"validate": {
@@ -17,12 +17,6 @@
                 {
                     "path": "src/main",
                     "maxPercentErrorLevel": 1,
-                    "maxPercentErrorDifference": 1,
-                    "report": "html"
-                },
-                {
-                    "path": "src/test",
-                    "maxPercentErrorLevel": 0,
                     "maxPercentErrorDifference": 1,
                     "report": "html"
                 }
