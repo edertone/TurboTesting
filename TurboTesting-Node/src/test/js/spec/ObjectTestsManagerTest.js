@@ -7,7 +7,9 @@
  * Tests related to the ObjectTestsManager class
  */
 
-const { ObjectTestsManager } = require('./../../../../target/turbotesting-node/dist/ts/index');
+const path = require('path');
+const projectRoot = path.resolve('./');
+const { ObjectTestsManager } = require(projectRoot + '/target/turbotesting-node/dist/ts/index');
 
 
 describe('ObjectTestsManagerTest', function() {
@@ -21,6 +23,26 @@ describe('ObjectTestsManagerTest', function() {
     afterEach(function() {
   
         
+    });
+    
+    
+    it('should correctly test objects properties with the assertIsObject method', function() {
+
+        expect(() => {this.sut.assertIsObject({})}).not.toThrow();
+        
+        expect(() => {this.sut.assertIsObject({a: 1})}).not.toThrow();
+        expect(() => {this.sut.assertIsObject({a: 1, b:2})}).not.toThrow();
+        expect(() => {this.sut.assertIsObject({b: 1, a:2})}).not.toThrow();
+        expect(() => {this.sut.assertIsObject({a: 1, b:2, c:3})}).not.toThrow();
+        
+        expect(() => {this.sut.assertIsObject([1])})
+            .toThrowError(Error, /ObjectTestsManager.assertObjectProperties failed. provided element is not an object/);
+        
+        expect(() => {this.sut.assertIsObject(1)})
+            .toThrowError(Error, /ObjectTestsManager.assertObjectProperties failed. provided element is not an object/);
+            
+        expect(() => {this.sut.assertIsObject('abc')})
+            .toThrowError(Error, /ObjectTestsManager.assertObjectProperties failed. provided element is not an object/);
     });
     
     

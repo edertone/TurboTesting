@@ -7,7 +7,9 @@
  * Tests related to the StringTestsManager class
  */
 
-const { StringTestsManager } = require('./../../../../target/turbotesting-node/dist/ts/index');
+const path = require('path');
+const projectRoot = path.resolve('./');
+const { StringTestsManager } = require(projectRoot + '/target/turbotesting-node/dist/ts/index');
 
 
 describe('StringTestsManagerTest', function() {

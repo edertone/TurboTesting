@@ -29,6 +29,23 @@ export class ObjectTestsManager {
     
     
     /**
+     * Test that the provided value is an object.
+     * If the test fails, an exception will be thrown
+     * 
+     * @param object Anything to test
+     * 
+     * @return void 
+     */
+    assertIsObject(object: any){
+        
+        if(!ObjectUtils.isObject(object)){
+            
+            throw new Error(`ObjectTestsManager.assertObjectProperties failed. provided element is not an object`);
+        }
+    }
+    
+    
+    /**
      * Test that a provided object has one or more of the provided properties
      * If the test fails, an exception will be thrown
      * 
