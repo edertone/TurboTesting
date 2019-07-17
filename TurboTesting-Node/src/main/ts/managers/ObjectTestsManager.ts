@@ -8,7 +8,8 @@
  */
 
 
-import { ObjectUtils } from 'turbocommons-ts';
+import { StringUtils, ObjectUtils, ArrayUtils } from 'turbocommons-ts';
+import { StringTestsManager } from './StringTestsManager';
 
 
 /**
@@ -20,11 +21,50 @@ export class ObjectTestsManager {
    
     
     /**
+     * The StringTestsManager instance used to perform string tests
+     */
+    private stringTestsManager: StringTestsManager = new StringTestsManager();
+
+    
+    /**
      * Class that helps with the process of testing object structures
      *  
      * @return A ObjectTestsManager instance
      */
     constructor() {
+    }
+    
+    
+    /**
+     * Replace all the occurences of the provided wildcard values into the given object
+     * 
+     * @param object An object that will be inspected for wildcard replacements
+     * @param wildcards An object containing key/pair values with the wildcard patterns and their respective values
+     * 
+     * @return An object with all the wildcard occurences replaced. Note that this is a copy, the original object won't be modified
+     */
+    replaceWildCardsOnObject(object: any, wildcards:any){
+
+        let cloned = ObjectUtils.clone(object); 
+            
+        if(StringUtils.isString(cloned)){
+            
+            return this.stringTestsManager.replaceWildCardsOnText(cloned, wildcards);
+        }
+        
+        if(ArrayUtils.isArray(cloned)){
+            
+            for (var i = 0; i < cloned.length; i++) {
+
+                cloned[i] = this.stringTestsManager.replaceWildCardsOnText(cloned[i], wildcards);
+            }
+            
+            return cloned;
+        }
+        
+        // TODO - implement other types of possible object structures
+        
+        return cloned;
     }
     
     
