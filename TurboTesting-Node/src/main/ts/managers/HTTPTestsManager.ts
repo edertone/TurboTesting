@@ -148,9 +148,10 @@ export class HTTPTestsManager {
      *        "startWith" If defined, the url response must start with the specified text (or null if not used)
      *        "endWith" If defined, the url response must end with the specified text (or null if not used)
      *        "notContains" A string or an array of strings with texts that must NOT exist on the url response (or null if not used)
-     * @param completeCallback A method that will be called once all the urls from the list have been tested.
+     * @param completeCallback A method that will be called once all the urls from the list have been tested. An array with all the results for
+     *        each request will be passed to this method.
      */
-    assertHttpRequests(urls: any[], completeCallback: () => void){
+    assertHttpRequests(urls: any[], completeCallback: (responses: string[]) => void){
     
         if(!ArrayUtils.isArray(urls)){
             
@@ -162,7 +163,7 @@ export class HTTPTestsManager {
             
             let hash = l.url;
             
-            if(l.postParameters && ObjectUtils.getKeys(l.postParameters).length > 0){
+            if(l.hasOwnProperty('postParameters') && ObjectUtils.getKeys(l.postParameters).length > 0){
                 
                 hash += JSON.stringify(l.postParameters);
             }
@@ -174,10 +175,11 @@ export class HTTPTestsManager {
             throw new Error('HTTPTestsManager.assertHttpRequests duplicate urls: ' + ArrayUtils.getDuplicateElements(urls.map(l => l.url)).join('\n'));
         }
         
+        let responses: string[] = [];
         let anyErrors: string[] = [];
         
         // Perform a recursive execution for all the provided urls
-        let recursiveCaller = (urls: any[], completeCallback: () => void) => {
+        let recursiveCaller = (urls: any[], completeCallback: (responses: string[]) => void) => {
             
             if(urls.length <= 0){
                 
@@ -186,7 +188,7 @@ export class HTTPTestsManager {
                     throw new Error(`HTTPTestsManager.assertHttpRequests failed with ${anyErrors} errors:\n` + anyErrors.join('\n'));
                 }
                 
-                return completeCallback();
+                return completeCallback(responses);
             }
             
             let entry = urls.shift();
@@ -203,11 +205,11 @@ export class HTTPTestsManager {
             }
             
             entry.url = this.stringTestsManager.replaceWildCardsOnText(entry.url, this.wildcards);
-            entry.contains = this.stringTestsManager.replaceWildCardsOnObject(entry.contains, this.wildcards);
+            entry.contains = this.objectTestsManager.replaceWildCardsOnObject(entry.contains, this.wildcards);
             
             let request: HTTPManagerBaseRequest;
             
-            if(entry.postParameters){
+            if(entry.hasOwnProperty('postParameters')){
             
                 request = new HTTPManagerPostRequest(entry.url);
                 
@@ -220,19 +222,22 @@ export class HTTPTestsManager {
             
             request.errorCallback = (errorMsg: string) => {
             
+                responses.push('');
                 anyErrors.push(`Could not load url: ${entry.url}\n${errorMsg}`);
 
                 recursiveCaller(urls, completeCallback);
             };
             
-            request.successCallback = (response: any) => {
+            request.successCallback = (response: string) => {
                 
-                if(entry.is && entry.is !== null && response !== entry.is){
+                responses.push(response);
+                
+                if(entry.hasOwnProperty('is') && entry.is !== null && response !== entry.is){
                        
                     anyErrors.push(`Response for the url: ${entry.url} was expected to be:\n${entry.is}\nBut was:\n${StringUtils.limitLen(response, 500)}\n\n`);
                 }
 
-                if(entry.contains && entry.contains !== null){
+                if(entry.hasOwnProperty('contains') && entry.contains !== null && entry.contains !== undefined && entry.contains !== ''){
 
                     try {
                         
@@ -245,7 +250,7 @@ export class HTTPTestsManager {
                     }
                 }
                 
-                if(entry.startWith && entry.startWith !== null){
+                if(entry.hasOwnProperty('startWith') && entry.startWith !== null){
                     
                     try {
 
@@ -258,7 +263,7 @@ export class HTTPTestsManager {
                     }                    
                  }
                  
-                 if(entry.endWith && entry.endWith !== null){
+                 if(entry.hasOwnProperty('endWith') && entry.endWith !== null){
                      
                      try {
 
@@ -271,7 +276,7 @@ export class HTTPTestsManager {
                      }
                  }
                  
-                 if(entry.notContains && entry.notContains !== null){
+                 if(entry.hasOwnProperty('notContains') && entry.notContains !== null){
                      
                      try {
 
