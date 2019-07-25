@@ -216,61 +216,278 @@ export class AutomatedBrowserManager {
                         }); 
                     });
                 });
-            });  
+            });
         });
     }
-        
+    
     
     /**
-     * Test that all the provided urls redirect to another expected url.
-     * If any of the provided urls fail to redirect to its expected value, the test will throw an exception.
+     * Perform several tests regarding the current state of the browser: Verify the current url, title, html original code, html
+     * loaded code, errors on console, etc..
      * 
-     * @param urls An array of objects where each one contains the following properties:
-     *        "url" the url to test
-     *        "to" the url that must be the final redirection target for the provided url
-     *        "comment" (Optional) An informative comment about the redirect purpose
-     * @param completeCallback A method that will be called once all the urls from the list have been tested.
+     * If any of the specified assertions fail, an exception will be thrown and complete callback won't be executed
+     * 
+     * @param asserts An object that defines the assertions that will be applied by this test. Following properties are accepted (skip them or set to null when not used):
+     *        "url" A string or an array of strings with texts that must exist in the same order on the current url              
+     *        "titleContains" A text that must exist on the current browser title
+     *        "ignoreConsoleErrors" The console output is always analyzed for errors. Any console error that happens will make the tests fail unless
+     *                              it contains any of the strings provided in this array
+     *        "sourceHtmlStartsWith" The html source code must start with the specified text
+     *        "sourceHtmlEndsWith" The html source code must end with the specified text
+     *        "sourceHtmlContains" A string or an array of strings with texts that must exist in the same order on the html source code.
+     *        "sourceHtmlNotContains" A string or an array of strings with texts tat must NOT exist on the html source code
+     *        "loadedHtmlStartsWith" If defined, the html code that is loaded (and maybe altered) by the browser must start with the specified text
+     *        "loadedHtmlEndsWith" If defined, the html code that is loaded (and maybe altered) by the browser must end with the specified text
+     *        "loadedHtmlContains" A string or an array of strings with texts that must exist in the same order on the html code that is loaded (and maybe altered) by the browser
+     *        "loadedHtmlNotContains" A string or an array of strings with texts tat must NOT exist on the html code that is loaded (and maybe altered) by the browser
+     *        
+     * @param completeCallback A method that will be called once all the tests have been successfully executed on the current browser state
+     * 
+     * @return void
      */
-    assertUrlsRedirect(urls: any[], completeCallback: () => void){
-    
-        // Fail if list has duplicate values
-        if(ArrayUtils.hasDuplicateElements(urls.map(l => l.url))){
-            
-            throw new Error('AutomatedBrowserManager.assertUrlsRedirect duplicate urls: ' + ArrayUtils.getDuplicateElements(urls.map(l => l.url)).join('\n'));
-        }
+    assertBrowserState(asserts: any, completeCallback: () => void){
         
         let anyErrors: string[] = [];
+    
+        this.objectTestsManager.assertIsObject(asserts);
         
-        // Load all the urls on the list and perform a request for each one.
-        let recursiveCaller = (urls: any[], completeCallback: () => void) => {
+        // Check that asserts has the right properties
+        try {
             
-            if(urls.length <= 0){
+            this.objectTestsManager.assertObjectProperties(asserts,
+                    ['url', 'titleContains', 'ignoreConsoleErrors', 'sourceHtmlContains', 'sourceHtmlStartsWith', 'sourceHtmlEndsWith',
+                     'sourceHtmlNotContains', 'loadedHtmlContains', 'loadedHtmlStartsWith', 'loadedHtmlEndsWith', 'loadedHtmlNotContains'], false);
+                 
+        } catch (e) {
+        
+            anyErrors.push(e.toString());
+        }
+        
+        this.waitTillBrowserReady(() => {
+        
+            // An auxiliary method to perform the final errors test and call the complete callback
+            let finish = () => {
                 
                 if(anyErrors.length > 0){
                     
-                    throw new Error(`AutomatedBrowserManager.assertUrlsRedirect failed with ${anyErrors.length} errors:\n` + anyErrors.join('\n'));
+                    throw new Error(`AutomatedBrowserManager.assertBrowserState failed with ${anyErrors.length} errors:\n` + anyErrors.join('\n'));
                 }
                 
-                return completeCallback();
+                completeCallback();
             }
             
-            let entry = urls.shift();
-            entry.url = this.stringTestsManager.replaceWildCardsOnText(entry.url, this.wildcards);
-            entry.to = this.stringTestsManager.replaceWildCardsOnText(entry.to, this.wildcards);
-            
-            this.loadUrl(entry.url, (results) => {
+            // An auxiliary method that is used to validate the specified html code with the specified asserts
+            let validateHtml = (html: string, url: string, startsWith: string, endsWith: string, notContains: string, contains: string) => {
                 
-                if(results.finalUrl !== entry.to){
+                if(startsWith !== null){
                     
-                    anyErrors.push('Url redirect failed. expected:\n    ' + entry.url +
-                        ' to redirect to:\n    ' + entry.to + ' but was:\n    ' + results.finalUrl);
+                    try {
+
+                        this.stringTestsManager.assertTextStartsWith(html, startsWith,
+                            `Source expected to start with: $fragment\nBut started with: $startedWith\nFor the url: ${url}`);
+                        
+                    } catch (e) {
+
+                        anyErrors.push(e.toString());
+                    }
                 }
+                 
+                if(endsWith !== null){
+                   
+                    try {
+    
+                        this.stringTestsManager.assertTextEndsWith(html, endsWith,
+                            `Source expected to end with: $fragment\nBut ended with: $endedWith\nFor the url: ${url}`);
+                         
+                    } catch (e) {
+                         
+                        anyErrors.push(e.toString());
+                    }
+                }
+                 
+                if(notContains !== null){
+                     
+                    try {
+
+                        this.stringTestsManager.assertTextNotContainsAny(html, notContains,
+                            `Source NOT expected to contain: $fragment\nBut contained it for the url: ${url}`);
+                         
+                    } catch (e) {
+                         
+                        anyErrors.push(e.toString());
+                    }
+                }
+                 
+                if(contains !== null){
+
+                    try {
+                         
+                        this.stringTestsManager.assertTextContainsAll(html,
+                            this.objectTestsManager.replaceWildCardsOnObject(contains, this.wildcards),
+                            `\nError searching for: $fragment on text in the url: ${url}\n$errorMsg\n`);
+                              
+                    } catch (e) {
+                     
+                        anyErrors.push(e.toString());
+                    }
+                }
+            }
+            
+            this.driver.executeScript('return window.location.href').then((browserUrl: any) => {
+                
+                // Check if the current url contents must be tested
+                if(asserts.hasOwnProperty('url') && asserts.url !== null){
                     
-                recursiveCaller(urls, completeCallback);
+                    try {
+
+                        this.stringTestsManager.assertTextContainsAll(browserUrl,
+                            this.stringTestsManager.replaceWildCardsOnText(asserts.url, this.wildcards),
+                            `Browser URL: ${browserUrl}\nDoes not contain expected text: $fragment`);
+                             
+                    } catch (e) {
+                    
+                        anyErrors.push(e.toString());
+                    }
+                }
+                
+                this.driver.getTitle().then((browserTitle: any) => {
+                    
+                    // Make sure no 404 error is shown at the browser title
+                    try {
+
+                        this.stringTestsManager.assertTextNotContainsAny(browserTitle, ['404 Not Found', 'Error 404 page'],
+                            `Unexpected 404 error found on browser title:\n    ${browserTitle}\nFor the url:\n    ${browserUrl}`);
+                        
+                    } catch (e) {
+                    
+                        anyErrors.push(e.toString());
+                    }
+                                    
+                    // Make sure title contains the text that is specified on the asserts expected values 
+                    if(asserts.hasOwnProperty('titleContains') && asserts.titleContains !== null){
+                    
+                        try {
+                            
+                            this.stringTestsManager.assertTextContainsAll(browserTitle, asserts.titleContains,
+                                `Title: ${browserTitle}\nDoes not contain expected text: ${asserts.titleContains}\nFor the url: ${browserUrl}`);
+                                 
+                        } catch (e) {
+                        
+                            anyErrors.push(e.toString());
+                        }
+                    }
+                    
+                    this.driver.manage().logs().get('browser').then((browserLogs: any) => {
+
+                        // Check that there are no SEVERE error logs on the browser
+                        // All the browser logs which contain any of the texts on the ignoreConsoleErrors array will be ignored 
+                        for (let logEntry of browserLogs) {
+                        
+                            if(logEntry.level.name === 'SEVERE'){
+                                
+                                let errorMustBeThrown = true;
+                                
+                                if(ArrayUtils.isArray(asserts.ignoreConsoleErrors)){
+                                    
+                                    for (let ignoreConsoleError of asserts.ignoreConsoleErrors) {
+            
+                                        if(logEntry.message.indexOf(ignoreConsoleError) >= 0){
+                                            
+                                            errorMustBeThrown = false;
+                                        }
+                                    }
+                                }
+                                
+                                if(errorMustBeThrown){
+                                    
+                                    anyErrors.push('Browser console has shown an error:\n    ' + logEntry.message + '\n' +
+                                        'For the url:\n    ' + browserUrl);
+                                }
+                            }
+                        }
+                        
+                        // Get the html code as it is loaded by the browser. This code may be different from the one that is given by the server,
+                        // cause it may be altered by the browser or any dynamic javascript code.
+                        this.driver.executeScript("return document.documentElement.outerHTML").then((html: string) => {
+                        
+                            validateHtml(html, browserUrl,
+                                    asserts.hasOwnProperty('loadedHtmlStartsWith') ? asserts.loadedHtmlStartsWith : null,
+                                    asserts.hasOwnProperty('loadedHtmlEndsWith') ? asserts.loadedHtmlEndsWith : null,
+                                    asserts.hasOwnProperty('loadedHtmlNotContains') ? asserts.loadedHtmlNotContains : null,
+                                    asserts.hasOwnProperty('loadedHtmlContains') ? asserts.loadedHtmlContains : null);
+                            
+                            // In case none of the real source code assertions have been defined, we will finish here, to avoid performing an unnecessary
+                            // http request to obtain the real source code.
+                            if((!asserts.hasOwnProperty('sourceHtmlStartsWith') || asserts.sourceHtmlStartsWith === null) &&
+                               (!asserts.hasOwnProperty('sourceHtmlEndsWith') || asserts.sourceHtmlEndsWith === null) &&
+                               (!asserts.hasOwnProperty('sourceHtmlNotContains') || asserts.sourceHtmlNotContains === null) &&
+                               (!asserts.hasOwnProperty('sourceHtmlContains') || asserts.sourceHtmlContains === null)){
+                                
+                                finish();
+                                
+                                return;
+                            }
+                            
+                            // If the url to test is belongs to a local file, we will directly get the source code from there.
+                            let urlLocalFileContents = '';
+                                
+                            try {
+
+                                const fs = require('fs');
+                                const url = require('url');
+                                urlLocalFileContents = fs.readFileSync(url.fileURLToPath(browserUrl), "utf8");
+
+                            } catch (e) {}
+
+                            if(urlLocalFileContents !== ''){
+
+                                validateHtml(urlLocalFileContents, browserUrl,
+                                        asserts.hasOwnProperty('sourceHtmlStartsWith') ? asserts.sourceHtmlStartsWith : null,
+                                        asserts.hasOwnProperty('sourceHtmlEndsWith') ? asserts.sourceHtmlEndsWith : null,
+                                        asserts.hasOwnProperty('sourceHtmlNotContains') ? asserts.sourceHtmlNotContains : null,
+                                        asserts.hasOwnProperty('sourceHtmlContains') ? asserts.sourceHtmlContains : null);
+                                
+                                finish();
+                                
+                                return;
+                            }
+                            
+                            // Perform an http request to get the url real code. This code may be different from the one that is found at the browser level,
+                            // cause the browser or any javascript dynamic process may alter it.
+                            try{
+                                
+                                let request = new HTTPManagerGetRequest(browserUrl);
+                                
+                                request.errorCallback = (errorMsg: string, errorCode: number) => {
+                                
+                                    anyErrors.push('Could not load url: ' + browserUrl + '\nError code: ' + errorCode + '\n' + errorMsg);
+                                };
+                                
+                                request.successCallback = (html: any) => {
+                                   
+                                    validateHtml(html, browserUrl,
+                                        asserts.hasOwnProperty('sourceHtmlStartsWith') ? asserts.sourceHtmlStartsWith : null,
+                                        asserts.hasOwnProperty('sourceHtmlEndsWith') ? asserts.sourceHtmlEndsWith : null,
+                                        asserts.hasOwnProperty('sourceHtmlNotContains') ? asserts.sourceHtmlNotContains : null,
+                                        asserts.hasOwnProperty('sourceHtmlContains') ? asserts.sourceHtmlContains : null);
+                                 };
+
+                                // Once the request to get the real browser code is done, we will check if any error has happened
+                                request.finallyCallback = finish;
+                                
+                                this.httpManager.execute(request);    
+                                
+                            } catch (e) {
+
+                                anyErrors.push('Error performing http request to '+ browserUrl + '\n' + e.toString());
+                                
+                                finish();
+                            }
+                        });
+                    });
+                });
             });
-        }
-        
-        recursiveCaller(urls, completeCallback);
+        });
     }
     
     
@@ -317,11 +534,67 @@ export class AutomatedBrowserManager {
             entry.url = this.stringTestsManager.replaceWildCardsOnText(entry.url, this.wildcards);
             
             this.loadUrl(entry.url, () => {
-                
+
+                // The url assert must be removed from the entry to prevent it from failing on the assertBrowserState method
+                delete entry.url;
+
                 this.assertBrowserState(entry, () => {
-                    
+
                     recursiveCaller(urls, completeCallback);
                 });            
+            });
+        }
+        
+        recursiveCaller(urls, completeCallback);
+    }
+        
+    
+    /**
+     * Test that all the provided urls redirect to another expected url.
+     * If any of the provided urls fail to redirect to its expected value, the test will throw an exception.
+     * 
+     * @param urls An array of objects where each one contains the following properties:
+     *        "url" the url to test
+     *        "to" the url (or a fragment of it) that must be the final redirection target for the provided url
+     *        "comment" (Optional) An informative comment about the redirect purpose
+     * @param completeCallback A method that will be called once all the urls from the list have been tested.
+     */
+    assertUrlsRedirect(urls: any[], completeCallback: () => void){
+    
+        // Fail if list has duplicate values
+        if(ArrayUtils.hasDuplicateElements(urls.map(l => l.url))){
+            
+            throw new Error('AutomatedBrowserManager.assertUrlsRedirect duplicate urls: ' + ArrayUtils.getDuplicateElements(urls.map(l => l.url)).join('\n'));
+        }
+        
+        let anyErrors: string[] = [];
+        
+        // Load all the urls on the list and perform a request for each one.
+        let recursiveCaller = (urls: any[], completeCallback: () => void) => {
+            
+            if(urls.length <= 0){
+                
+                if(anyErrors.length > 0){
+                    
+                    throw new Error(`AutomatedBrowserManager.assertUrlsRedirect failed with ${anyErrors.length} errors:\n` + anyErrors.join('\n'));
+                }
+                
+                return completeCallback();
+            }
+            
+            let entry = urls.shift();
+            entry.url = this.stringTestsManager.replaceWildCardsOnText(entry.url, this.wildcards);
+            entry.to = this.stringTestsManager.replaceWildCardsOnText(entry.to, this.wildcards);
+            
+            this.loadUrl(entry.url, (results) => {
+                
+                if(results.finalUrl.indexOf(entry.to) < 0){
+                    
+                    anyErrors.push('Url redirect failed. expected:\n    ' + entry.url +
+                        ' to redirect to:\n    ' + entry.to + ' but was:\n    ' + results.finalUrl);
+                }
+                    
+                recursiveCaller(urls, completeCallback);
             });
         }
         
@@ -390,201 +663,7 @@ export class AutomatedBrowserManager {
             throw new Error('Error trying to click by xpath: ' + xpath + '\n' + e.toString());
         });
     }
-    
-    
-    /**
-     * Perform several tests regarding the current state of the browser: Verify the current url, title, html code,
-     * errors on console, etc..
-     * 
-     * If any of the specified assertions fails, an exception will be thrown
-     * 
-     * @param asserts An object that defines the assertions that will be applied by this test:
-     *        "url" A string or an array of strings with texts that must exist on the current browser url (skip it or set it to null if not used)
-     *        "titleContains" A text that must exist on the current browser title (skip it or set it to null if not used)
-     *        "ignoreConsoleErrors" The console output is analyzed for errors. Any console error that happens will make the tests fail unless it contains
-     *                              any of the strings provided here
-     *        "htmlContains" A string or an array of strings with texts that must exist on the html source code (skip it or set it to null if not used)
-     *        "htmlStartsWith" If defined, the html source code must start with the specified text (skip it or set it to null if not used)
-     *        "htmlEndsWith" If defined, the html source code must end with the specified text (skip it or set it to null if not used)
-     *        "htmlNotContains" A string or an array of strings with texts tat must NOT exist on the html source code (skip it or set it to null if not used)
-     * @param completeCallback A method that will be called once all the tests have been successfully executed on the current browser state
-     * 
-     * @return void
-     */
-    assertBrowserState(asserts: any,  completeCallback: () => void){
         
-        let anyErrors: string[] = [];
-        
-        // Check that asserts has the right properties
-        try {
-            
-            this.objectTestsManager.assertObjectProperties(asserts,
-                    ['url', 'titleContains', 'ignoreConsoleErrors', 'htmlContains',
-                     'htmlStartsWith', 'htmlEndsWith', 'htmlNotContains'], false);
-                 
-        } catch (e) {
-        
-            anyErrors.push(e.toString());
-        }
-        
-        // Replace wildcards on assert values
-        asserts.url = this.stringTestsManager.replaceWildCardsOnText(asserts.url, this.wildcards);
-        asserts.htmlContains = this.stringTestsManager.replaceWildCardsOnObject(asserts.htmlContains, this.wildcards);
-        
-        this.waitTillBrowserReady(() => {
-        
-            this.driver.executeScript('return window.location.href').then((browserUrl: any) => {
-                
-                if(asserts.url && asserts.url !== null){
-                    
-                    try {
-
-                        this.stringTestsManager.assertTextContainsAll(browserUrl, asserts.url,
-                            `Browser URL: ${browserUrl}\nDoes not contain expected text: $fragment`);
-                             
-                    } catch (e) {
-                    
-                        anyErrors.push(e.toString());
-                    }
-                }
-                
-                this.driver.getTitle().then((browserTitle: any) => {
-                    
-                    // Make sure no 404 error is shown at the browser title
-                    try {
-
-                        this.stringTestsManager.assertTextNotContainsAny(browserTitle, ['404 Not Found', 'Error 404 page'],
-                            `Unexpected 404 error found on browser title:\n    ${browserTitle}\nFor the url:\n    ${browserUrl}`);
-                        
-                    } catch (e) {
-                    
-                        anyErrors.push(e.toString());
-                    }
-                                    
-                    // Make sure title contains the text that is specified on the asserts expected values 
-                    if(asserts.titleContains && asserts.titleContains !== null){
-                    
-                        try {
-                            
-                            this.stringTestsManager.assertTextContainsAll(browserTitle, asserts.titleContains,
-                                `Title: ${browserTitle}\nDoes not contain expected text: ${asserts.titleContains}\nFor the url: ${browserUrl}`);
-                                 
-                        } catch (e) {
-                        
-                            anyErrors.push(e.toString());
-                        }
-                    }
-                    
-                    this.driver.manage().logs().get('browser').then((browserLogs: any) => {
-
-                        // Check that there are no SEVERE error logs on the browser
-                        for (let logEntry of browserLogs) {
-                        
-                            if(logEntry.level.name === 'SEVERE'){
-                                
-                                let errorMustBeThrown = true;
-                                
-                                if(ArrayUtils.isArray(asserts.ignoreConsoleErrors)){
-                                    
-                                    for (let ignoreConsoleError of asserts.ignoreConsoleErrors) {
-            
-                                        if(logEntry.message.indexOf(ignoreConsoleError) >= 0){
-                                            
-                                            errorMustBeThrown = false;
-                                        }
-                                    }
-                                }
-                                
-                                if(errorMustBeThrown){
-                                    
-                                    anyErrors.push('Browser console has shown an error:\n    ' + logEntry.message + '\n' +
-                                        'For the url:\n    ' + browserUrl);
-                                }
-                            }
-                        }
-                        
-                        // Perform an http request to get the url real code. If we use selenium to read this information, the obtained html code
-                        // will not be the real one that was returned by the server, cause the browser alters the html elements after parsing them.
-                        // We want to test the exact real html code instead of the one that's altered by the browser
-                        let request = new HTTPManagerGetRequest(browserUrl);
-                        
-                        request.errorCallback = (errorMsg: string, errorCode: number) => {
-                        
-                            anyErrors.push('Could not load url: ' + browserUrl + '\nError code: ' + errorCode + '\n' + errorMsg);
-                        };
-                        
-                        request.successCallback = (html: any) => {
-                           
-                            if(asserts.htmlStartsWith && asserts.htmlStartsWith !== null){
-                                
-                                try {
-
-                                    this.stringTestsManager.assertTextStartsWith(html, asserts.htmlStartsWith,
-                                        `Source expected to start with: $fragment\nBut started with: $startedWith\nFor the url: ${browserUrl}`);
-                                    
-                                } catch (e) {
-
-                                    anyErrors.push(e.toString());
-                                }
-                             }
-                             
-                             if(asserts.htmlEndsWith && asserts.htmlEndsWith !== null){
-                               
-                                 try {
-
-                                     this.stringTestsManager.assertTextEndsWith(html, asserts.htmlEndsWith,
-                                         `Source expected to end with: $fragment\nBut ended with: $endedWith\nFor the url: ${browserUrl}`);
-                                     
-                                 } catch (e) {
-                                     
-                                     anyErrors.push(e.toString());
-                                 }
-                             }
-                             
-                             if(asserts.htmlNotContains && asserts.htmlNotContains !== null){
-                                 
-                                 try {
-
-                                     this.stringTestsManager.assertTextNotContainsAny(html, asserts.htmlNotContains,
-                                         `Source NOT expected to contain: $fragment\nBut contained it for the url: ${browserUrl}`);
-                                     
-                                 } catch (e) {
-                                     
-                                     anyErrors.push(e.toString());
-                                 }
-                             }
-                             
-                             if(asserts.htmlContains && asserts.htmlContains !== null){
-    
-                                 try {
-                                     
-                                     this.stringTestsManager.assertTextContainsAll(html, asserts.htmlContains,
-                                         `\nError searching for: $fragment on text in the url: ${browserUrl}\n$errorMsg\n`);
-                                          
-                                 } catch (e) {
-                                 
-                                     anyErrors.push(e.toString());
-                                 }
-                             }
-                        };
-                        
-                        request.finallyCallback = () => {
-                            
-                            if(anyErrors.length > 0){
-                                
-                                throw new Error(`AutomatedBrowserManager.assertBrowserState failed with ${anyErrors.length} errors:\n` + anyErrors.join('\n'));
-                            }
-                            
-                            completeCallback();
-                        };
-                        
-                        this.httpManager.execute(request);
-                    });
-                });
-            });
-        });
-    }
-    
     
     /**
      * This method will perform standard recursive tests on a full website provided its root link. The whole site will be tested
