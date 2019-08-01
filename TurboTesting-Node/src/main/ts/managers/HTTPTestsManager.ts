@@ -24,6 +24,14 @@ declare function require(name: string): any;
  */
 export class HTTPTestsManager {
 
+
+    /**
+     * Defines if this class will throw code exceptions for all the assertions that fail (RECOMMENDED!).
+     * If set to false, the list of failed assertion errors will be returned by each assertion complete callback method and
+     * no assertion exception will be thrown by this class. (Note that all exception that are not related with asserts will still be thrown)
+     */
+    isAssertExceptionsEnabled = true;
+
     
     /**
      * An object containing key / pair values where each key is the name of a wildcard,
@@ -77,14 +85,22 @@ export class HTTPTestsManager {
 
     
     /**
-     * Test that all the urls on a given list throw a 404 error
+     * Test that all the urls on a given list return non 200 ok error code.
      * 
      * If any of the provided urls gives a 200 ok result or can be correctly loaded, the test will fail
      * 
-     * @param urls An array of strings where each item is an url to test
-     * @param completeCallback A method that will be called once all the urls from the list have been tested.
+     * @param urls An array where each element can be a string containing the url that must fail, or an object that contains the following properties:
+     *        "url" the url to test
+     *        "postParameters" If defined, an object containing key pair values that will be sent as POST parameters to the url. If this property does not exist, the request will be a GET one.
+     *        "responseCode" If defined, the url response code must match the specified value
+     *        "is" If defined, the url response must be exactly the specified string
+     *        "contains" A string or an array of strings with texts that must exist on the url response (or null if not used)
+     *        "startWith" If defined, the url response must start with the specified text (or null if not used)
+     *        "endWith" If defined, the url response must end with the specified text (or null if not used)
+     *        "notContains" A string or an array of strings with texts that must NOT exist on the url response (or null if not used)
+     * @param completeCallback A method that will be called once all the urls from the list have been tested (If assert exceptions are disabled, the list of errors will also be found here).
      */
-    assertUrlsFail(urls: string[], completeCallback: () => void){
+    assertUrlsFail(urls: any[], completeCallback: (assertErrors?: string[]) => void){
         
         if(!ArrayUtils.isArray(urls)){
             
@@ -92,43 +108,84 @@ export class HTTPTestsManager {
         }
 
         // Fail if list has duplicate values
-        if(ArrayUtils.hasDuplicateElements(urls)){
+        let urlHashesList = [];
+        
+        for (let url of urls) {
             
-            throw new Error('AutomatedBrowserManager.assertUrlsFail duplicate urls: ' + ArrayUtils.getDuplicateElements(urls).join('\n'));
+            if(StringUtils.isString(url)){
+                
+                urlHashesList.push(url);
+            
+            }else{
+                
+                let hash = url.url;
+            
+                // Post parameters are taken into consideration if defined.
+                if(url.hasOwnProperty('postParameters') && ObjectUtils.getKeys(url.postParameters).length > 0){
+                    
+                    hash += JSON.stringify(url.postParameters);
+                }
+                
+                urlHashesList.push(hash);
+            }
+        }
+        
+        if(ArrayUtils.hasDuplicateElements(urlHashesList)){
+            
+            throw new Error('HTTPTestsManager.assertUrlsFail duplicate urls: ' + ArrayUtils.getDuplicateElements(urlHashesList).join('\n'));
         }
         
         let anyErrors: string[] = [];
         
         // Perform a recursive execution for all the provided urls
-        let recursiveCaller = (urls: string[], completeCallback: () => void) => {
-            
+        let recursiveCaller = (urls: any[], completeCallback: (assertErrors?: string[]) => void) => {
+
             if(urls.length <= 0){
                 
-                if(anyErrors.length > 0){
+                if(this.isAssertExceptionsEnabled && anyErrors.length > 0){
                     
-                    throw new Error(`AutomatedBrowserManager.assertUrlsFail failed with ${anyErrors.length} errors:\n` + anyErrors.join('\n'));
+                    throw new Error(`HTTPTestsManager.assertUrlsFail failed with ${anyErrors.length} errors:\n` + anyErrors.join('\n'));
                 }
-                
-                return completeCallback();
+
+                return completeCallback(anyErrors);
             }
             
-            let url = this.stringTestsManager.replaceWildCardsOnText(String(urls.shift()), this.wildcards);
+            let entry = urls.shift();
             
-            let request = new HTTPManagerGetRequest(url);
+            if(StringUtils.isString(entry)){
+                
+                entry = this.stringTestsManager.replaceWildCardsOnText(entry, this.wildcards);
+            }
             
-            request.errorCallback = () => {
+            let request = this.createRequestFromEntry(entry);
             
+            request.errorCallback = (errorMsg: string, errorCode: number, response: string) => {
+            
+                if(entry.hasOwnProperty('responseCode') && entry.responseCode !== null && String(errorCode) !== String(entry.responseCode)){
+                       
+                    anyErrors.push(`Response code for the url: ${entry.url} was expected to be:\n${entry.responseCode}\nBut was:\n${errorCode} - ${errorMsg}\n\n`);
+                }
+                
+                this.assertRequestContents(response, entry, anyErrors);
+                
                 recursiveCaller(urls, completeCallback);
             };
             
             request.successCallback = () => {
             
-                anyErrors.push(`URL expected to fail with 404 but was 200 ok: ${url}`);
+                anyErrors.push(`URL expected to fail but was 200 ok: ${request.url}`);
             
                 recursiveCaller(urls, completeCallback);
             };
             
-            this.httpManager.execute(request);
+            try{
+                
+                this.httpManager.execute(request);
+                
+            } catch (e) {
+
+                recursiveCaller(urls, completeCallback);
+            }
         }
         
         recursiveCaller(urls, completeCallback);
@@ -149,9 +206,9 @@ export class HTTPTestsManager {
      *        "endWith" If defined, the url response must end with the specified text (or null if not used)
      *        "notContains" A string or an array of strings with texts that must NOT exist on the url response (or null if not used)
      * @param completeCallback A method that will be called once all the urls from the list have been tested. An array with all the results for
-     *        each request will be passed to this method.
+     *        each request will be passed to this method (If assert exceptions are disabled, the list of errors will also be found here).
      */
-    assertHttpRequests(urls: any[], completeCallback: (responses: string[]) => void){
+    assertHttpRequests(urls: any[], completeCallback: (responses: string[], assertErrors?: string[]) => void){
     
         if(!ArrayUtils.isArray(urls)){
             
@@ -163,6 +220,7 @@ export class HTTPTestsManager {
             
             let hash = l.url;
             
+            // Post parameters are taken into consideration if defined.
             if(l.hasOwnProperty('postParameters') && ObjectUtils.getKeys(l.postParameters).length > 0){
                 
                 hash += JSON.stringify(l.postParameters);
@@ -179,16 +237,16 @@ export class HTTPTestsManager {
         let anyErrors: string[] = [];
         
         // Perform a recursive execution for all the provided urls
-        let recursiveCaller = (urls: any[], completeCallback: (responses: string[]) => void) => {
+        let recursiveCaller = (urls: any[], completeCallback: (responses: string[], assertErrors?: string[]) => void) => {
             
             if(urls.length <= 0){
                 
-                if(anyErrors.length > 0){
+                if(this.isAssertExceptionsEnabled && anyErrors.length > 0){
                     
                     throw new Error(`HTTPTestsManager.assertHttpRequests failed with ${anyErrors} errors:\n` + anyErrors.join('\n'));
                 }
                 
-                return completeCallback(responses);
+                return completeCallback(responses, anyErrors);
             }
             
             let entry = urls.shift();
@@ -204,21 +262,7 @@ export class HTTPTestsManager {
                 anyErrors.push(e.toString());
             }
             
-            entry.url = this.stringTestsManager.replaceWildCardsOnText(entry.url, this.wildcards);
-            entry.contains = this.objectTestsManager.replaceWildCardsOnObject(entry.contains, this.wildcards);
-            
-            let request: HTTPManagerBaseRequest;
-            
-            if(entry.hasOwnProperty('postParameters')){
-            
-                request = new HTTPManagerPostRequest(entry.url);
-                
-                (request as HTTPManagerPostRequest).parameters = entry.postParameters;
-                    
-            }else{
-                
-                request = new HTTPManagerGetRequest(entry.url);
-            }
+            let request = this.createRequestFromEntry(entry);
             
             request.errorCallback = (errorMsg: string) => {
             
@@ -232,69 +276,108 @@ export class HTTPTestsManager {
                 
                 responses.push(response);
                 
-                if(entry.hasOwnProperty('is') && entry.is !== null && response !== entry.is){
-                       
-                    anyErrors.push(`Response for the url: ${entry.url} was expected to be:\n${entry.is}\nBut was:\n${StringUtils.limitLen(response, 500)}\n\n`);
-                }
-
-                if(entry.hasOwnProperty('contains') && entry.contains !== null && entry.contains !== undefined && entry.contains !== ''){
-
-                    try {
-                        
-                        this.stringTestsManager.assertTextContainsAll(response, entry.contains,
-                            `Response expected to contain: $fragment\nBut not contained it for the url: ${entry.url} which started with: \n${StringUtils.limitLen(response, 500)}\n\n`);
-                             
-                    } catch (e) {
-                    
-                        anyErrors.push(e.toString());
-                    }
-                }
-                
-                if(entry.hasOwnProperty('startWith') && entry.startWith !== null){
-                    
-                    try {
-
-                        this.stringTestsManager.assertTextStartsWith(response, entry.startWith,
-                            `Response expected to start with: $fragment\nBut started with: $startedWith\nFor the url: ${entry.url}`);
-                        
-                    } catch (e) {
-
-                        anyErrors.push(e.toString());
-                    }                    
-                 }
+                this.assertRequestContents(response, entry, anyErrors);
                  
-                 if(entry.hasOwnProperty('endWith') && entry.endWith !== null){
-                     
-                     try {
-
-                         this.stringTestsManager.assertTextEndsWith(response, entry.endWith,
-                             `Response expected to end with: $fragment\nBut ended with: $endedWith\nFor the url: ${entry.url}`);
-                                 
-                     } catch (e) {
-                    
-                         anyErrors.push(e.toString());
-                     }
-                 }
-                 
-                 if(entry.hasOwnProperty('notContains') && entry.notContains !== null){
-                     
-                     try {
-
-                         this.stringTestsManager.assertTextNotContainsAny(response, entry.notContains,
-                             `Response NOT expected to contain: $fragment\nBut contained it for the url: ${entry.url}`);
-                                 
-                     } catch (e) {
-                    
-                         anyErrors.push(e.toString());
-                     }
-                 }
-                 
-                 recursiveCaller(urls, completeCallback);
+                recursiveCaller(urls, completeCallback);
             };
             
             this.httpManager.execute(request);
         }
         
         recursiveCaller(urls, completeCallback);        
+    }
+    
+    
+    /**
+     * Aux method to generate an http request from the data of an entry
+     */
+    private createRequestFromEntry(entry: any){
+        
+        if(StringUtils.isString(entry)){
+
+            return new HTTPManagerGetRequest(entry);
+        }
+            
+        entry.url = this.stringTestsManager.replaceWildCardsOnText(entry.url, this.wildcards);
+        entry.contains = this.objectTestsManager.replaceWildCardsOnObject(entry.contains, this.wildcards);
+        
+        let request: HTTPManagerBaseRequest;
+            
+        if(entry.hasOwnProperty('postParameters')){
+        
+            request = new HTTPManagerPostRequest(entry.url);
+            
+            (request as HTTPManagerPostRequest).parameters = entry.postParameters;
+                
+        }else{
+            
+            request = new HTTPManagerGetRequest(entry.url);
+        }
+        
+        return request;
+    }
+    
+    
+    /**
+     * Aux method to perform multiple assertions on a request response
+     */
+    private assertRequestContents(response: string, entry: any, anyErrors: string[]){
+        
+       if(entry.hasOwnProperty('is') && entry.is !== null && response !== entry.is){
+                       
+           anyErrors.push(`Response for the url: ${entry.url} was expected to be:\n${entry.is}\nBut was:\n${StringUtils.limitLen(response, 500)}\n\n`);
+       }
+       
+       if(entry.hasOwnProperty('contains') && entry.contains !== null && entry.contains !== undefined && entry.contains !== ''){
+           
+           try {
+               
+               this.stringTestsManager.assertTextContainsAll(response, entry.contains,
+                   `Response expected to contain: $fragment\nBut not contained it for the url: ${entry.url} which started with: \n${StringUtils.limitLen(response, 500)}\n\n`);
+                    
+           } catch (e) {
+           
+               anyErrors.push(e.toString());
+           }
+       }
+       
+       if(entry.hasOwnProperty('startWith') && entry.startWith !== null){
+           
+           try {
+               
+               this.stringTestsManager.assertTextStartsWith(response, entry.startWith,
+                   `Response expected to start with: $fragment\nBut started with: $startedWith\nFor the url: ${entry.url}`);
+               
+           } catch (e) {
+            
+               anyErrors.push(e.toString());
+           }                    
+        }
+        
+        if(entry.hasOwnProperty('endWith') && entry.endWith !== null){
+            
+            try {
+                
+                this.stringTestsManager.assertTextEndsWith(response, entry.endWith,
+                    `Response expected to end with: $fragment\nBut ended with: $endedWith\nFor the url: ${entry.url}`);
+                        
+            } catch (e) {
+           
+                anyErrors.push(e.toString());
+            }
+        }
+        
+        if(entry.hasOwnProperty('notContains') && entry.notContains !== null){
+            
+            try {
+                
+                this.stringTestsManager.assertTextNotContainsAny(response, entry.notContains,
+                    `Response NOT expected to contain: $fragment\nBut contained it for the url: ${entry.url}`);
+                        
+            } catch (e) {
+            
+                anyErrors.push(e.toString());
+            }
+        }
     }
 }

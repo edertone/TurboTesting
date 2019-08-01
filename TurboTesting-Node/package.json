@@ -1,6 +1,6 @@
 {
   "name": "turbotesting-node",
-  "version": "7.0.0",
+  "version": "7.1.0",
   "description": "General purpose cross-language library to improve automated testing productivity",
   "main": "index.js",
   "types": "index.d.ts",
@@ -14,10 +14,10 @@
   },
   "dependencies": {
     "jasmine": "^3.4.0",
-    "selenium-webdriver": "^4.0.0-alpha.1",
-    "turbocommons-ts": "^2.1.0",
-    "turbodepot-node": "^2.0.0",
-    "xhr2": "^0.1.4"
+    "selenium-webdriver": "^4.0.0-alpha.4",
+    "turbocommons-ts": "^3.0.0",
+    "turbodepot-node": "^5.0.1",
+    "xhr2": "^0.2.0"
   },
   "keywords": [
     "automated",
