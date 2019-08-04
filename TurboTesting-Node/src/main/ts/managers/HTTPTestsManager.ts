@@ -107,33 +107,7 @@ export class HTTPTestsManager {
             throw new Error('urls parameter must be an array');
         }
 
-        // Fail if list has duplicate values
-        let urlHashesList = [];
-        
-        for (let url of urls) {
-            
-            if(StringUtils.isString(url)){
-                
-                urlHashesList.push(url);
-            
-            }else{
-                
-                let hash = url.url;
-            
-                // Post parameters are taken into consideration if defined.
-                if(url.hasOwnProperty('postParameters') && ObjectUtils.getKeys(url.postParameters).length > 0){
-                    
-                    hash += JSON.stringify(url.postParameters);
-                }
-                
-                urlHashesList.push(hash);
-            }
-        }
-        
-        if(ArrayUtils.hasDuplicateElements(urlHashesList)){
-            
-            throw new Error('HTTPTestsManager.assertUrlsFail duplicate urls: ' + ArrayUtils.getDuplicateElements(urlHashesList).join('\n'));
-        }
+        this.findDuplicateUrlValues(urls, 'HTTPTestsManager.assertUrlsFail duplicate urls:');
         
         let anyErrors: string[] = [];
         
@@ -152,21 +126,11 @@ export class HTTPTestsManager {
             
             let entry = urls.shift();
             
-            if(StringUtils.isString(entry)){
-                
-                entry = this.stringTestsManager.replaceWildCardsOnText(entry, this.wildcards);
-            }
-            
-            let request = this.createRequestFromEntry(entry);
+            let request = this.createRequestFromEntry(entry, anyErrors);
             
             request.errorCallback = (errorMsg: string, errorCode: number, response: string) => {
             
-                if(entry.hasOwnProperty('responseCode') && entry.responseCode !== null && String(errorCode) !== String(entry.responseCode)){
-                       
-                    anyErrors.push(`Response code for the url: ${entry.url} was expected to be:\n${entry.responseCode}\nBut was:\n${errorCode} - ${errorMsg}\n\n`);
-                }
-                
-                this.assertRequestContents(response, entry, anyErrors);
+                this.assertRequestContents(response, entry, anyErrors, String(errorCode), errorMsg);
                 
                 recursiveCaller(urls, completeCallback);
             };
@@ -193,13 +157,14 @@ export class HTTPTestsManager {
     
     
     /**
-     * Test that all the urls on a given list (which will be loaded using HTTP POST) give the expected results
+     * Test that all the urls on a given list (which will be loaded using HTTP POST) give the expected (valid response) results
      * 
      * If any of the provided urls fails any of the expected values, the test will fail
      * 
      * @param urls An array of objects where each one contains the following properties:
      *        "url" the url to test
      *        "postParameters" If defined, an object containing key pair values that will be sent as POST parameters to the url. If this property does not exist, the request will be a GET one.
+     *        "responseCode" If defined, the url response code must match the specified value
      *        "is" If defined, the url response must be exactly the specified string
      *        "contains" A string or an array of strings with texts that must exist on the url response (or null if not used)
      *        "startWith" If defined, the url response must start with the specified text (or null if not used)
@@ -214,24 +179,8 @@ export class HTTPTestsManager {
             
             throw new Error('urls parameter must be an array');
         }
-        
-        // Fail if list has duplicate values
-        if(ArrayUtils.hasDuplicateElements(urls.map((l) => {
-            
-            let hash = l.url;
-            
-            // Post parameters are taken into consideration if defined.
-            if(l.hasOwnProperty('postParameters') && ObjectUtils.getKeys(l.postParameters).length > 0){
-                
-                hash += JSON.stringify(l.postParameters);
-            }
-            
-            return hash;
-            
-        }))){
-            
-            throw new Error('HTTPTestsManager.assertHttpRequests duplicate urls: ' + ArrayUtils.getDuplicateElements(urls.map(l => l.url)).join('\n'));
-        }
+
+        this.findDuplicateUrlValues(urls, 'HTTPTestsManager.assertHttpRequests duplicate urls:');
         
         let responses: string[] = [];
         let anyErrors: string[] = [];
@@ -251,23 +200,12 @@ export class HTTPTestsManager {
             
             let entry = urls.shift();
             
-            // Check that the provided entry object is correct
-            try {
-                
-                this.objectTestsManager.assertObjectProperties(entry,
-                        ["url", "postParameters", "is", "contains", "startWith", "endWith", "notContains"], false);
-                     
-            } catch (e) {
-            
-                anyErrors.push(e.toString());
-            }
-            
-            let request = this.createRequestFromEntry(entry);
+            let request = this.createRequestFromEntry(entry, anyErrors);
             
             request.errorCallback = (errorMsg: string) => {
             
                 responses.push('');
-                anyErrors.push(`Could not load url: ${entry.url}\n${errorMsg}`);
+                anyErrors.push(`Could not load url: ${request.url}\n${errorMsg}`);
 
                 recursiveCaller(urls, completeCallback);
             };
@@ -276,12 +214,23 @@ export class HTTPTestsManager {
                 
                 responses.push(response);
                 
-                this.assertRequestContents(response, entry, anyErrors);
+                this.assertRequestContents(response, entry, anyErrors, '200');
                  
                 recursiveCaller(urls, completeCallback);
             };
             
-            this.httpManager.execute(request);
+            try{
+                
+                this.httpManager.execute(request);
+                
+            } catch (e) {
+
+                anyErrors.push('Error performing http request to '+ request.url + '\n' + e.toString());
+
+                this.assertRequestContents('', entry, anyErrors, '0');
+
+                recursiveCaller(urls, completeCallback);
+            }
         }
         
         recursiveCaller(urls, completeCallback);        
@@ -289,15 +238,62 @@ export class HTTPTestsManager {
     
     
     /**
+     * Aux method to find duplicate values on an url list
+     */
+    private findDuplicateUrlValues(urls: any[], errorMessageHeading: string){
+        
+        // Fail if list has duplicate values
+        let urlHashesList = [];
+        
+        for (let url of urls) {
+            
+            if(StringUtils.isString(url)){
+                
+                urlHashesList.push(url);
+            
+            }else{
+                
+                let hash = url.url;
+            
+                // Post parameters are taken into consideration if defined.
+                if(url.hasOwnProperty('postParameters') && ObjectUtils.getKeys(url.postParameters).length > 0){
+                    
+                    hash += JSON.stringify(url.postParameters);
+                }
+                
+                urlHashesList.push(hash);
+            }
+        }
+        
+        if(ArrayUtils.hasDuplicateElements(urlHashesList)){
+            
+            throw new Error(errorMessageHeading + ' ' + ArrayUtils.getDuplicateElements(urlHashesList).join('\n'));
+        }        
+    }
+    
+    /**
      * Aux method to generate an http request from the data of an entry
      */
-    private createRequestFromEntry(entry: any){
+    private createRequestFromEntry(entry: any, anyErrors: string[]){
         
         if(StringUtils.isString(entry)){
 
+            entry = this.stringTestsManager.replaceWildCardsOnText(entry, this.wildcards);
+
             return new HTTPManagerGetRequest(entry);
         }
+        
+        // Check that the provided entry object is correct
+        try {
             
+            this.objectTestsManager.assertObjectProperties(entry,
+                ["url", "postParameters", "responseCode", "is", "contains", "startWith", "endWith", "notContains"], false);
+                
+        } catch (e) {
+        
+            anyErrors.push(e.toString());
+        } 
+                    
         entry.url = this.stringTestsManager.replaceWildCardsOnText(entry.url, this.wildcards);
         entry.contains = this.objectTestsManager.replaceWildCardsOnObject(entry.contains, this.wildcards);
         
@@ -321,37 +317,42 @@ export class HTTPTestsManager {
     /**
      * Aux method to perform multiple assertions on a request response
      */
-    private assertRequestContents(response: string, entry: any, anyErrors: string[]){
-        
-       if(entry.hasOwnProperty('is') && entry.is !== null && response !== entry.is){
+    private assertRequestContents(response: string, entry: any, anyErrors: string[], errorCode: string = '', errorMsg: string = ''){
+    
+        if(errorCode !== '' && entry.hasOwnProperty('responseCode') && entry.responseCode !== null && String(errorCode) !== String(entry.responseCode)){
                        
-           anyErrors.push(`Response for the url: ${entry.url} was expected to be:\n${entry.is}\nBut was:\n${StringUtils.limitLen(response, 500)}\n\n`);
-       }
+            anyErrors.push(`Response code for the url: ${entry.url} was expected to be ${entry.responseCode} but was ${errorCode} - ${errorMsg}\n\n`);
+        }
+                
+        if(entry.hasOwnProperty('is') && entry.is !== null && response !== entry.is){
+                       
+            anyErrors.push(`Response for the url: ${entry.url} was expected to be:\n${entry.is}\nBut was:\n${StringUtils.limitLen(response, 500)}\n\n`);
+        }
        
-       if(entry.hasOwnProperty('contains') && entry.contains !== null && entry.contains !== undefined && entry.contains !== ''){
+        if(entry.hasOwnProperty('contains') && entry.contains !== null && entry.contains !== undefined && entry.contains !== ''){
            
-           try {
+            try {
                
-               this.stringTestsManager.assertTextContainsAll(response, entry.contains,
-                   `Response expected to contain: $fragment\nBut not contained it for the url: ${entry.url} which started with: \n${StringUtils.limitLen(response, 500)}\n\n`);
+                this.stringTestsManager.assertTextContainsAll(response, entry.contains,
+                    `Response expected to contain: $fragment\nBut not contained it for the url: ${entry.url} which started with: \n${StringUtils.limitLen(response, 500)}\n\n`);
                     
-           } catch (e) {
+            } catch (e) {
            
-               anyErrors.push(e.toString());
-           }
-       }
+                anyErrors.push(e.toString());
+            }
+        }
        
-       if(entry.hasOwnProperty('startWith') && entry.startWith !== null){
+        if(entry.hasOwnProperty('startWith') && entry.startWith !== null){
            
-           try {
+            try {
                
-               this.stringTestsManager.assertTextStartsWith(response, entry.startWith,
-                   `Response expected to start with: $fragment\nBut started with: $startedWith\nFor the url: ${entry.url}`);
+                this.stringTestsManager.assertTextStartsWith(response, entry.startWith,
+                    `Response expected to start with: $fragment\nBut started with: $startedWith\nFor the url: ${entry.url}`);
                
-           } catch (e) {
+            } catch (e) {
             
-               anyErrors.push(e.toString());
-           }                    
+                anyErrors.push(e.toString());
+            }                    
         }
         
         if(entry.hasOwnProperty('endWith') && entry.endWith !== null){
