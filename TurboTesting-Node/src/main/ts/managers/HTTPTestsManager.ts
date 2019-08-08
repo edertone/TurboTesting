@@ -202,10 +202,10 @@ export class HTTPTestsManager {
             
             let request = this.createRequestFromEntry(entry, anyErrors);
             
-            request.errorCallback = (errorMsg: string) => {
+            request.errorCallback = (errorMsg: string, errorCode: number, response: string) => {
             
-                responses.push('');
-                anyErrors.push(`Could not load url: ${request.url}\n${errorMsg}`);
+                responses.push(response);
+                anyErrors.push(`Could not load url (${errorCode}): ${request.url}\n${errorMsg}\n${response}`);
 
                 recursiveCaller(urls, completeCallback);
             };

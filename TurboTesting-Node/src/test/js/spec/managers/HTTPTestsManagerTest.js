@@ -225,6 +225,23 @@ describe('HTTPTestsManagerTest', function() {
     });
     
     
+    it('should generate assert exceptions for the assertHttpRequests method when an url that gives error code is passed', function(done) {
+
+        this.sut.isAssertExceptionsEnabled = false;
+        
+        this.sut.assertHttpRequests(["https://stackoverflow.com/%"], (responses, assertErrors) => {
+            
+            expect(responses[0]).toContain('Bad Request');
+            expect(assertErrors.length).toBe(1);
+            expect(assertErrors[0]).toContain("Could not load url (400)");
+            expect(assertErrors[0]).toContain("Bad Request");
+            expect(assertErrors[0]).toContain("<");
+            
+            done();
+        });
+    });
+    
+    
     it('should generate assert exceptions for the assertHttpRequests method when a mixed list of invalid string urls and objects containing invalid urls are passed', function(done) {
 
         this.sut.isAssertExceptionsEnabled = false;
