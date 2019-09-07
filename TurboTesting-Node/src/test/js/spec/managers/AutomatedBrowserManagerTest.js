@@ -53,7 +53,7 @@ describe('AutomatedBrowserManagerTest', function() {
     it('should correctly execute the loadUrl method with a basic html page', function(done) {
     
         this.automatedBrowserManager.loadUrl(
-            projectRoot + '/src/test/js/resources/managers/automatedBrowserManager/basic-html/basic.html', (results) => {
+            projectRoot + '/src/test/resources/managers/automatedBrowserManager/basic-html/basic.html', (results) => {
 
                 expect(results.title).toBe('Convert text to camel case online');
                 expect(results.source).toContain('<h1>Convert string to camelCase online</h1>');
@@ -70,7 +70,7 @@ describe('AutomatedBrowserManagerTest', function() {
         this.automatedBrowserManager.wildcards = {$projectRoot: projectRoot};
     
         this.automatedBrowserManager.loadUrl(
-            '$projectRoot/src/test/js/resources/managers/automatedBrowserManager/basic-html/basic.html', (results) => {
+            '$projectRoot/src/test/resources/managers/automatedBrowserManager/basic-html/basic.html', (results) => {
 
                 expect(results.title).toBe('Convert text to camel case online');
                 expect(results.source).toContain('<h1>Convert string to camelCase online</h1>');
@@ -85,7 +85,7 @@ describe('AutomatedBrowserManagerTest', function() {
     it('should correctly execute the loadUrl method with an url that contains javascript console errors', function(done) {
         
         this.automatedBrowserManager.loadUrl(
-            projectRoot + '/src/test/js/resources/managers/automatedBrowserManager/basic-html/basic-with-error-js.html', (results) => {
+            projectRoot + '/src/test/resources/managers/automatedBrowserManager/basic-html/basic-with-error-js.html', (results) => {
 
                 expect(results.title).toBe('Convert text to camel case online');
                 expect(results.source).toContain('<body onload="myFunction()">');
@@ -118,10 +118,10 @@ describe('AutomatedBrowserManagerTest', function() {
             .toThrowError(Error, /provided element is not an object/);
     
         this.automatedBrowserManager.loadUrl(
-            '$projectRoot/src/test/js/resources/managers/automatedBrowserManager/basic-html/basic.html', (results) => {
+            '$projectRoot/src/test/resources/managers/automatedBrowserManager/basic-html/basic.html', (results) => {
         
             let expected = {
-                url: "/src/test/js/resources/managers/automatedBrowserManager/basic-html/basic.html",
+                url: "/src/test/resources/managers/automatedBrowserManager/basic-html/basic.html",
                 titleContains: "Convert text to camel case online",
                 loadedHtmlStartsWith: '<html lang="en">',
                 loadedHtmlEndsWith: "</html>",
@@ -177,7 +177,7 @@ describe('AutomatedBrowserManagerTest', function() {
         this.automatedBrowserManager.wildcards = {$projectRoot: projectRoot};
     
         let expected = [{
-            url: "$projectRoot/src/test/js/resources/managers/automatedBrowserManager/basic-html/basic.html",
+            url: "$projectRoot/src/test/resources/managers/automatedBrowserManager/basic-html/basic.html",
             titleContains: "Convert text to camel case online",
             loadedHtmlStartsWith: '<html',
             loadedHtmlEndsWith: "</html>",
@@ -227,8 +227,8 @@ describe('AutomatedBrowserManagerTest', function() {
         this.automatedBrowserManager.wildcards = {$projectRoot: projectRoot};
     
         let expected = [{
-            url: "$projectRoot/src/test/js/resources/managers/automatedBrowserManager/basic-html/basic-with-redirect.html",
-            to: "src/test/js/resources/managers/automatedBrowserManager/basic-html/basic.html"      
+            url: "$projectRoot/src/test/resources/managers/automatedBrowserManager/basic-html/basic-with-redirect.html",
+            to: "src/test/resources/managers/automatedBrowserManager/basic-html/basic.html"      
         }];
     
         this.automatedBrowserManager.assertUrlsRedirect(expected, done);
