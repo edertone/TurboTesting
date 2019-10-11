@@ -161,7 +161,8 @@ export class AutomatedBrowserManager {
 
 
     /**
-     * Wait till the browser has finished loading everything and is in a ready state
+     * Wait till the browser has finished loading everything and is in a ready state.
+     * If it is already ready once this method is called, the complete callback will be called inmediately
      * 
      * @param completeCallback A method that will be executed once the browser is ready
      */
@@ -174,7 +175,10 @@ export class AutomatedBrowserManager {
                 return readyState === 'complete';
             });
             
-        }, this.waitTimeout).then(completeCallback);
+        }, this.waitTimeout).then(completeCallback).catch((e:Error) => {
+            
+            throw new Error('Error waiting for browser ready: ' + e.toString());
+        });
     }
     
     
@@ -217,6 +221,10 @@ export class AutomatedBrowserManager {
                     });
                 });
             });
+            
+        }).catch((e:Error) => {
+            
+            throw new Error('Error in loadUrl calling driver.get: ' + e.toString());
         });
     }
     
