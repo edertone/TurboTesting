@@ -1,0 +1,60 @@
+{
+    "$schema": "https://raw.githubusercontent.com/edertone/TurboBuilder/master/TurboBuilder-Node/src/main/resources/json-schema/turbobuilder.schema.json",
+    "metadata": {
+        "name": "turbotesting-php",
+        "description": "General purpose cross-language library to improve automated testing productivity",
+        "builderVersion": "2.2.0"
+    },
+    "validate": {
+        "runBeforeBuild": true,
+        "projectStructure": {
+            "readmeFileMandatory": false
+        },
+        "filesContent": {
+            "copyPasteDetect": [
+                {
+                    "path": "src/main",
+                    "maxPercentErrorLevel": 0,
+                    "maxPercentErrorDifference": 1,
+                    "report": ""
+                },
+                {
+                    "path": "src/test",
+                    "maxPercentErrorLevel": 0,
+                    "maxPercentErrorDifference": 1,
+                    "report": ""
+                }
+            ],
+            "copyrightHeaders": [
+                {
+                    "path": "extras/copyright headers/TurboTesting-Php.txt",
+                    "affectedPaths": ["src"],
+                    "includes": ["php"],
+                    "excludes": []
+                }
+            ]
+        },
+        "php": {
+            "namespaces": {
+                "enabled": true,
+                "mandatory": true,
+                "mustContain": ["org\\turbotesting\\src\\$path"],
+                "excludes": ["autoloader.php", "index.php"]
+            }
+        }
+    },
+    "build": {
+        "lib_php": {
+        }
+    },
+    "release": {
+    },
+    "test": [
+        {
+            "type": "phpUnit",
+            "testsRoot": "src/test",
+            "coverageReport": true,
+            "coverageReportOpenAfterTests": true
+        }
+    ]
+}
