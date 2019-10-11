@@ -9,6 +9,7 @@
  * CopyRight : -> Copyright 2015 Edertone Advanded Solutions (08211 Castellar del Vallès, Barcelona). http://www.edertone.com
  */
 
+require_once __DIR__.'/../libs/turbocommons-php-3.0.1.phar';
 require_once __DIR__.'/../../main/php/autoloader.php';
 
 

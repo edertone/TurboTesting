@@ -19,6 +19,12 @@
                     "maxPercentErrorLevel": 1,
                     "maxPercentErrorDifference": 1,
                     "report": "html"
+                },
+                {
+                    "path": "src/test",
+                    "maxPercentErrorLevel": 7,
+                    "maxPercentErrorDifference": 5,
+                    "report": ""
                 }
             ],
     	    "copyrightHeaders": [
@@ -32,7 +38,7 @@
     	    		"path": "extras/copyright headers/JsFiles-Header.txt",
     	    		"affectedPaths": ["src"],
     	    		"includes": ["js"],
-    	    		"excludes": ["src/test"]
+    	    		"excludes": []
     	    	}
     	    ]
         }

@@ -13,6 +13,7 @@ namespace org\turbotesting\src\main\php\utils;
 
 use Throwable;
 use UnexpectedValueException;
+use org\turbocommons\src\main\php\utils\StringUtils;
 
 
 /**
@@ -22,27 +23,37 @@ class AssertUtils {
 
 
     /**
-     * Test that the provided method throws a runtime exception
+     * Test that the provided method throws a runtime exception. If assertion fails, an exception will be thrown
      *
-     * @param callable $function A callable function that will be executed to test for exceptions
-     * @param string $expectedErrorRegexp A string containing a regular expression that must be found on the thrown exception error message
+     * @param callable $callableFunction A callable function that will be executed to test for exceptions
+     * @param string $expectedErrorRegexp A string containing a regular expression that must be found on the thrown exception error message (If not provided, any error message will be accepted).
      * @param string $assertionFailMessage A message that will be set to the error that is thrown if no exception happens on the callable method
      *
      * @throws UnexpectedValueException
      *
      * @return void
      */
-    public static function throwsException($function, $expectedErrorRegexp, $assertionFailMessage = 'Expecting an exception that was not thrown'){
+    public static function throwsException($callableFunction, $expectedErrorRegexp = '', $assertionFailMessage = 'Expecting an exception that was not thrown'){
+
+        if(!is_callable($callableFunction)){
+
+            throw new UnexpectedValueException('callableFunction must be a function');
+        }
+
+        if(!is_string($expectedErrorRegexp)){
+
+            throw new UnexpectedValueException('expectedErrorRegexp must be a valid regexp');
+        }
 
         $exceptionHappened = false;
 
         try {
 
-            $function();
+            $callableFunction();
 
         } catch (Throwable $e) {
 
-            if (!preg_match($expectedErrorRegexp, $e->getMessage())) {
+            if (!StringUtils::isEmpty($expectedErrorRegexp) && !preg_match($expectedErrorRegexp, $e->getMessage())) {
 
                 throw new UnexpectedValueException("Exception was thrown as expected, but the exception message :\n".$e->getMessage()."\nDoes not match the expected regexp:\n".$expectedErrorRegexp);
             }

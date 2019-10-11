@@ -1,0 +1,2 @@
+Now that turbotesting has a php version, it is important to try to unify the methods signature and concepts.
+The node version defines StringTestsManager.ts and ObjectTestsManager.ts classes which maybe should be moved to a more generic "AssertionUtils" class
