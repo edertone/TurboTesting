@@ -596,7 +596,8 @@ export class AutomatedBrowserManager {
             
             this.loadUrl(entry.url, (results) => {
                 
-                if(!results.finalUrl.endsWith(entry.to)){
+                // If the finalUrl does not end with entry.to value, the test will fail
+                if(results.finalUrl.indexOf(entry.to, results.finalUrl.length - entry.to.length) === -1){
                     
                     anyErrors.push('Url redirect failed. expected:\n    ' + entry.url +
                         ' to redirect to:\n    ' + entry.to + ' but was:\n    ' + results.finalUrl);
