@@ -85,7 +85,7 @@ export class HTTPTestsManager {
 
     
     /**
-     * Test that all the urls on a given list return non 200 ok error code.
+     * Test that all the urls on a given list return non "200 ok" error code.
      * 
      * If any of the provided urls gives a 200 ok result or can be correctly loaded, the test will fail
      * 

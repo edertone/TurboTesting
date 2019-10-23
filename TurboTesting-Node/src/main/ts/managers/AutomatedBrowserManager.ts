@@ -235,18 +235,18 @@ export class AutomatedBrowserManager {
      * 
      * If any of the specified assertions fail, an exception will be thrown and complete callback won't be executed
      * 
-     * @param asserts An object that defines the assertions that will be applied by this test. Following properties are accepted (skip them or set to null when not used):
-     *        "url" A string or an array of strings with texts that must exist in the same order on the current url              
-     *        "titleContains" A text that must exist on the current browser title
+     * @param asserts An object that defines the assertions that will be applied by this test. Following properties are accepted (skip them or set to null when not used):<br>
+     *        "url" A string or an array of strings with texts that must exist in the same order on the current url<br>              
+     *        "titleContains" A text that must exist on the current browser title<br>
      *        "ignoreConsoleErrors" The console output is always analyzed for errors. Any console error that happens will make the tests fail unless
-     *                              it contains any of the strings provided in this array
-     *        "sourceHtmlStartsWith" The html source code must start with the specified text
-     *        "sourceHtmlEndsWith" The html source code must end with the specified text
-     *        "sourceHtmlContains" A string or an array of strings with texts that must exist in the same order on the html source code.
-     *        "sourceHtmlNotContains" A string or an array of strings with texts tat must NOT exist on the html source code
-     *        "loadedHtmlStartsWith" If defined, the html code that is loaded (and maybe altered) by the browser must start with the specified text
-     *        "loadedHtmlEndsWith" If defined, the html code that is loaded (and maybe altered) by the browser must end with the specified text
-     *        "loadedHtmlContains" A string or an array of strings with texts that must exist in the same order on the html code that is loaded (and maybe altered) by the browser
+     *                              it contains any of the strings provided in this array<br>
+     *        "sourceHtmlStartsWith" The html source code must start with the specified text<br>
+     *        "sourceHtmlEndsWith" The html source code must end with the specified text<br>
+     *        "sourceHtmlContains" A string or an array of strings with texts that must exist in the same order on the html source code.<br>
+     *        "sourceHtmlNotContains" A string or an array of strings with texts tat must NOT exist on the html source code<br>
+     *        "loadedHtmlStartsWith" If defined, the html code that is loaded (and maybe altered) by the browser must start with the specified text<br>
+     *        "loadedHtmlEndsWith" If defined, the html code that is loaded (and maybe altered) by the browser must end with the specified text<br>
+     *        "loadedHtmlContains" A string or an array of strings with texts that must exist in the same order on the html code that is loaded (and maybe altered) by the browser<br>
      *        "loadedHtmlNotContains" A string or an array of strings with texts tat must NOT exist on the html code that is loaded (and maybe altered) by the browser
      *        
      * @param completeCallback A method that will be called once all the tests have been successfully executed on the current browser state
@@ -612,9 +612,11 @@ export class AutomatedBrowserManager {
     
     
     /**
-     * Test that all the urls on a given list throw a 404 error
+     * Test that all the urls on a given list return non "200 ok" error code.
      * 
-     * If any of the provided urls gives a 200 ok result, the test will fail
+     * If any of the provided urls gives a 200 ok result or can be correctly loaded, the test will fail
+     *
+     * @see HTTPTestsManager.assertUrlsFail
      * 
      * @param urls An array of strings where each item is an url to test
      * @param completeCallback A method that will be called once all the urls from the list have been tested.
