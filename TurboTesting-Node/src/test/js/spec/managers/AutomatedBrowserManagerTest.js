@@ -61,7 +61,7 @@ describe('AutomatedBrowserManagerTest', function() {
                 expect(results.title).toBe('Convert text to camel case online');
                 expect(results.source).toContain('<h1>Convert string to camelCase online</h1>');
                 expect(results.finalUrl).toContain('resources/managers/automatedBrowserManager/basic-html/basic.html');
-                expect(results.browserLogs.length).toBe(0);
+                expect(this.automatedBrowserManager.logEntries.length).toBe(0);
                                   
                 done();
             });
@@ -78,7 +78,7 @@ describe('AutomatedBrowserManagerTest', function() {
                 expect(results.title).toBe('Convert text to camel case online');
                 expect(results.source).toContain('<h1>Convert string to camelCase online</h1>');
                 expect(results.finalUrl).toContain('resources/managers/automatedBrowserManager/basic-html/basic.html');
-                expect(results.browserLogs.length).toBe(0);
+                expect(this.automatedBrowserManager.logEntries.length).toBe(0);
                                   
                 done();
             });
@@ -93,9 +93,9 @@ describe('AutomatedBrowserManagerTest', function() {
                 expect(results.title).toBe('Convert text to camel case online');
                 expect(results.source).toContain('<body onload="myFunction()">');
                 expect(results.finalUrl).toContain('resources/managers/automatedBrowserManager/basic-html/basic-with-error-js.html');
-                expect(results.browserLogs.length).toBe(1);
-                expect(results.browserLogs[0].message).toContain('myFunction is not defined');
-                expect(results.browserLogs[0].level.name).toBe('SEVERE');
+                expect(this.automatedBrowserManager.logEntries.length).toBe(1);
+                expect(this.automatedBrowserManager.logEntries[0].message).toContain('myFunction is not defined');
+                expect(this.automatedBrowserManager.logEntries[0].level.name).toBe('SEVERE');
                 done();
             });
     });
@@ -159,6 +159,27 @@ describe('AutomatedBrowserManagerTest', function() {
                 sourceHtmlEndsWith: "</html>",
                 sourceHtmlContains: ['Google'],
                 sourceHtmlNotContains: 'nottocontaintextstring'
+            };
+    
+            this.automatedBrowserManager.assertBrowserState(expected, done);    
+        });
+    });
+    
+    
+    it('should correctly ignore all the console errors on the assertBrowserState method when enabling ALL ignoreConsoleErrors', function(done) {
+        
+        this.automatedBrowserManager.loadUrl(
+            projectRoot + '/src/test/resources/managers/automatedBrowserManager/basic-html/basic-with-error-js.html', (results) => {
+        
+            expect(this.automatedBrowserManager.logEntries.length).toBe(1);
+            expect(this.automatedBrowserManager.logEntries[0].message).toContain('myFunction is not defined');
+            expect(this.automatedBrowserManager.logEntries[0].level.name).toBe('SEVERE');
+            
+            let expected = {
+                url: "basic-with-error-js.html",
+                titleContains: "Convert text to camel case online",
+                sourceHtmlContains: "myFunction()",
+                ignoreConsoleErrors: true
             };
     
             this.automatedBrowserManager.assertBrowserState(expected, done);    
@@ -235,5 +256,43 @@ describe('AutomatedBrowserManagerTest', function() {
         }];
     
         this.automatedBrowserManager.assertUrlsRedirect(expected, done);
+    });
+    
+    
+    it('should correctly execute the clickById method', function(done) {
+        
+        // TODO        
+        done();
+    });
+    
+    
+    it('should correctly execute the clickByXpath method', function(done) {
+        
+        // TODO        
+        done();
+    });
+    
+    
+    it('should correctly execute the sendKeysById method', function(done) {
+        
+        this.automatedBrowserManager.loadUrl(
+            projectRoot + '/src/test/resources/managers/automatedBrowserManager/basic-html/basic-with-input.html', () => {
+                
+            this.automatedBrowserManager.sendKeysById('someInput', 'some text here', () => {
+                
+                this.automatedBrowserManager.getAttributeById('someInput', 'value', (text) => {
+
+                    expect(text).toBe('some text here');
+                    done();
+                })
+            });
+        });
+    });
+    
+    
+    it('should correctly execute the sendKeysByXpath method', function(done) {
+        
+        // TODO
+        done();
     });
 });

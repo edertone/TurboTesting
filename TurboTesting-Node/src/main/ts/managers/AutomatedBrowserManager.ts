@@ -37,6 +37,13 @@ export class AutomatedBrowserManager {
      * by this class (urls, html code, document titles, etc...)
      */
     wildcards: { [key: string]: string } = {};
+    
+    
+    /**
+     * Contains all the log entries that have been generated for the currently loaded URL.
+     * This array will be reset each time a new url is loaded by the browser.
+     */
+    logEntries = [];
 
     
     /**
@@ -85,7 +92,7 @@ export class AutomatedBrowserManager {
      * Stores the NodeJs webdriver chrome instance
      */
     private chrome: any;
-    
+        
     
     /**
      * Browser automated testing management class
@@ -188,10 +195,10 @@ export class AutomatedBrowserManager {
      * 
      * @param url The url we want to open with the browser
      * @param completeCallback A method that will be executed once the url loading finishes. A single results object will be passed
-     *        to this method, containing all the loaded page information we may need: title, source, finalUrl (in case any redirection
-     *        happened from the original url), and browserLogs (containing all the information that browser may have output to its console)
+     *        to this method, containing all the loaded page information we may need: title, source and finalUrl (in case any redirection
+     *        happened from the original url)
      */
-    loadUrl(url: string, completeCallback: (results: {title:string; source:any; finalUrl:string; browserLogs:any}) => void){
+    loadUrl(url: string, completeCallback: (results: {title:string; source:any; finalUrl:string}) => void){
         
         let results: any = {};
     
@@ -211,7 +218,7 @@ export class AutomatedBrowserManager {
                         
                         this.driver.manage().logs().get('browser').then((browserLogs: any) => {
                             
-                            results.browserLogs = browserLogs;
+                            this.logEntries = browserLogs;
                             
                             this.waitTillBrowserReady(() => {
                                 
@@ -239,7 +246,7 @@ export class AutomatedBrowserManager {
      *        "url" A string or an array of strings with texts that must exist in the same order on the current url<br>              
      *        "titleContains" A text that must exist on the current browser title<br>
      *        "ignoreConsoleErrors" The console output is always analyzed for errors. Any console error that happens will make the tests fail unless
-     *                              it contains any of the strings provided in this array<br>
+     *                              it contains any of the strings provided in this array. To ignore ALL the console errors, we can set this value directly to true<br>
      *        "sourceHtmlStartsWith" The html source code must start with the specified text<br>
      *        "sourceHtmlEndsWith" The html source code must end with the specified text<br>
      *        "sourceHtmlContains" A string or an array of strings with texts that must exist in the same order on the html source code.<br>
@@ -385,31 +392,38 @@ export class AutomatedBrowserManager {
                         }
                     }
                     
+                    // Note that calling this to get the browser logs resets the logs buffer, so the next time is called it will be empty.
+                    // This is why we store all the logs on the logEntries property, so they can all be available for the currently loaded url
                     this.driver.manage().logs().get('browser').then((browserLogs: any) => {
+                        
+                        this.logEntries.concat(browserLogs);
 
                         // Check that there are no SEVERE error logs on the browser
-                        // All the browser logs which contain any of the texts on the ignoreConsoleErrors array will be ignored 
-                        for (let logEntry of browserLogs) {
-                        
-                            if(logEntry.level.name === 'SEVERE'){
-                                
-                                let errorMustBeThrown = true;
-                                
-                                if(ArrayUtils.isArray(asserts.ignoreConsoleErrors)){
+                        if(!(asserts.hasOwnProperty('ignoreConsoleErrors') && asserts.ignoreConsoleErrors === true)){
+                            
+                            for (let logEntry of this.logEntries) {
+                            
+                                if(logEntry.level.name === 'SEVERE'){
                                     
-                                    for (let ignoreConsoleError of asserts.ignoreConsoleErrors) {
-            
-                                        if(logEntry.message.indexOf(ignoreConsoleError) >= 0){
-                                            
-                                            errorMustBeThrown = false;
+                                    let errorMustBeThrown = true;
+                                    
+                                    // All the browser logs which contain any of the texts on the ignoreConsoleErrors array will be ignored 
+                                    if(asserts.hasOwnProperty('ignoreConsoleErrors') && ArrayUtils.isArray(asserts.ignoreConsoleErrors)){
+                                        
+                                        for (let ignoreConsoleError of asserts.ignoreConsoleErrors) {
+                
+                                            if(logEntry.message.indexOf(ignoreConsoleError) >= 0){
+                                                
+                                                errorMustBeThrown = false;
+                                            }
                                         }
                                     }
-                                }
-                                
-                                if(errorMustBeThrown){
                                     
-                                    anyErrors.push('Browser console has shown an error:\n    ' + logEntry.message + '\n' +
-                                        'For the url:\n    ' + browserUrl);
+                                    if(errorMustBeThrown){
+                                        
+                                        anyErrors.push('Browser console has shown an error:\n    ' + logEntry.message + '\n' +
+                                            'For the url:\n    ' + browserUrl);
+                                    }
                                 }
                             }
                         }
@@ -500,19 +514,15 @@ export class AutomatedBrowserManager {
     
     
     /**
-     * This method will perform a large amount of tests for a provided list of urls.
+     * This method will perform a large amount of tests for a provided list of urls to check that they load as expected.
      *
      * If any of the provided urls fails any of the verifications, the test will fail.
      * 
+     * @see AutomatedBrowserManager.assertBrowserState()
+     
      * @param urls An array of objects where each one contains the following properties:
      *        "url" the url to test (mandatory)
-     *        "title" A text that must exist on the browser title for the url once loaded (skip it or set it to null if not used)
-     *        "source" A string or an array of strings with texts that must exist on the url source code (skip it or set it to null if not used)
-     *        "ignoreConsoleErrors" The console output is always analyzed for errors. Any console error that happens will make the tests fail unless it contains
-     *                              any of the strings provided here
-     *        "startWith" If defined, the loaded source code must start with the specified text (skip it or set it to null if not used)
-     *        "endWith" If defined, the loaded source code must end with the specified text (skip it or set it to null if not used)
-     *        "notContains" A string or an array of strings with texts tat must NOT exist on the url source code (skip it or set it to null if not used)
+     *        Any of the properties that can be specifed with the assertBrowserState() method can also be used.
      * @param completeCallback A method that will be called once all the urls from the list have been tested.
      */
     assertUrlsLoadOk(urls: any[], completeCallback: () => void){
@@ -644,15 +654,7 @@ export class AutomatedBrowserManager {
      */
     clickById(id:string, completeCallback: () => void){
         
-        this.driver.wait(this.webdriver.until.elementLocated(this.webdriver.By.id(id)), this.waitTimeout)
-            .then((element: any) => {
-            
-            element.click().then(completeCallback); 
-            
-        }).catch((e:Error) => {
-            
-            throw new Error('Error trying to click by id: ' + id + '\n' + e.toString());
-        });
+        this.clickByXpath("//*[@id='" + id + "']", completeCallback);
     }
     
     
@@ -671,10 +673,78 @@ export class AutomatedBrowserManager {
         
         }).catch((e:Error) => {
             
-            throw new Error('Error trying to click by xpath: ' + xpath + '\n' + e.toString());
+            throw new Error('Error trying to click by: ' + xpath + '\n' + e.toString());
         });
     }
+    
+    
+    /**
+     * Send text to the specified document element 
+     * 
+     * @param id The html id for the element that we want to send text to
+     * @param text The text we want to send
+     * @param completeCallback A method that will be called once the specified element is found and the text is sent
+     */
+    sendKeysById(id:string, text:string, completeCallback: () => void){
         
+        this.sendKeysByXpath("//*[@id='" + id + "']", text, completeCallback);
+    }
+    
+    
+    /**
+     * Send text to the specified document element
+     * 
+     * @param xpath The xpath query that lets us find element to which we want to send text
+     * @param text The text we want to send
+     * @param completeCallback A method that will be called once the specified element is found and the text is sent
+     */
+    sendKeysByXpath(xpath:string, text:string, completeCallback: () => void){
+        
+        this.driver.wait(this.webdriver.until.elementLocated(this.webdriver.By.xpath(xpath)), this.waitTimeout)
+            .then((element: any) => {
+            
+            element.sendKeys(text).then(completeCallback);
+        
+        }).catch((e:Error) => {
+            
+            throw new Error('Error trying to send input by: ' + xpath + '\n' + e.toString());
+        });
+    }
+    
+    
+    /**
+     * Obtain the value for an attribute of a document element 
+     * 
+     * @param id The html id for the element
+     * @param attribute The attribute that we want to read
+     * @param completeCallback A method that will be called once the specified attribute value is found. Attribute value will be passed.
+     */
+    getAttributeById(id:string, attribute:string, completeCallback: (attributeValue: string) => void){
+        
+        this.getAttributeByXpath("//*[@id='" + id + "']", attribute, completeCallback);
+    }
+    
+    
+    /**
+     * Obtain the value for an attribute of a document element 
+     * 
+     * @param xpath The xpath query that lets us find the element
+     * @param attribute The attribute that we want to read
+     * @param completeCallback A method that will be called once the specified attribute value is found. Attribute value will be passed.
+     */
+    getAttributeByXpath(xpath:string, attribute:string, completeCallback: (text: string) => void){
+        
+        this.driver.wait(this.webdriver.until.elementLocated(this.webdriver.By.xpath(xpath)), this.waitTimeout)
+            .then((element: any) => {
+            
+            element.getAttribute(attribute).then(completeCallback);
+        
+        }).catch((e:Error) => {
+            
+            throw new Error('Error trying to get attribute by: ' + xpath + '\n' + e.toString());
+        });
+    }
+    
     
     /**
      * This method will perform standard recursive tests on a full website provided its root link. The whole site will be tested
