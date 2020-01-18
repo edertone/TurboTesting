@@ -129,6 +129,7 @@ export class AutomatedBrowserManager {
         }
         
         let chromeOptions = new this.chrome.Options();
+        let chromeCapabilities = this.webdriver.Capabilities.chrome();
         
         // Initialize the chrome driver with the specified language.
         chromeOptions.addArguments([`--lang=${language}`]);
@@ -142,6 +143,10 @@ export class AutomatedBrowserManager {
             });
         }
         
+        // Force acceptance of https untrusted certificates
+        chromeOptions.addArguments("--ignore-certificate-errors");
+        chromeOptions.addArguments('--allow-insecure-localhost');
+        
         // Enable logs so the tests can read them
         let loggingPrefs = new this.webdriver.logging.Preferences();
         loggingPrefs.setLevel('browser', this.webdriver.logging.Level.ALL); 
@@ -149,7 +154,7 @@ export class AutomatedBrowserManager {
         
         // Instantiate the browser driver
         this.driver = new this.webdriver.Builder()
-            .withCapabilities(this.webdriver.Capabilities.chrome())
+            .withCapabilities(chromeCapabilities)
             .setChromeOptions(chromeOptions)
             .setLoggingPrefs(loggingPrefs)
             .build();
