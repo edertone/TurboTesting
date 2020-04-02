@@ -259,6 +259,20 @@ describe('AutomatedBrowserManagerTest', function() {
     });
     
     
+    it('should correctly execute the waitTillElementExists method', function(done) {
+        
+        // TODO
+        done();
+    });
+    
+    
+    it('should correctly execute the waitTillIdExists method', function(done) {
+        
+        // TODO
+        done();
+    });
+    
+    
     it('should correctly execute the clickById method', function(done) {
         
         // TODO        

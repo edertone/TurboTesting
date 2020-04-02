@@ -652,6 +652,38 @@ export class AutomatedBrowserManager {
     
     
     /**
+     * Wait till the provided element is found on the current document or fail after the timeout has passed  
+     * 
+     * @param element The name for the html element that we are looking for
+     * @param completeCallback A method that will be called once the specified element is found
+     */
+    waitTillElementExists(element:string, completeCallback: () => void){
+        
+        this.driver.wait(this.webdriver.until.elementLocated(this.webdriver.By.xpath("//" + element)), this.waitTimeout)
+            .then(completeCallback).catch((e:Error) => {
+            
+            throw new Error('Error trying to find element: ' + element + '\n' + e.toString());
+        });
+    }
+    
+    
+    /**
+     * Wait till the element with the provided id is found on the current document or fail after the timeout has passed  
+     * 
+     * @param id The id for the html element that we are looking for
+     * @param completeCallback A method that will be called once the specified element is found
+     */
+    waitTillIdExists(id:string, completeCallback: () => void){
+        
+        this.driver.wait(this.webdriver.until.elementLocated(this.webdriver.By.xpath("//*[@id='" + id + "']")), this.waitTimeout)
+            .then(completeCallback).catch((e:Error) => {
+            
+            throw new Error('Error trying to find id: ' + id + '\n' + e.toString());
+        });
+    }
+    
+    
+    /**
      * Click on a document element  
      * 
      * @param id The html id for the element that we want to click on
