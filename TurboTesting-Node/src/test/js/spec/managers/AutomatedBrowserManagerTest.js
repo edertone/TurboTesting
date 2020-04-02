@@ -53,6 +53,20 @@ describe('AutomatedBrowserManagerTest', function() {
     });
     
     
+    it('should correctly execute the waitTillElementsExist method', function(done) {
+        
+        // TODO
+        done();
+    });
+    
+    
+    it('should correctly execute the waitTillIdsExist method', function(done) {
+        
+        // TODO
+        done();
+    });
+    
+    
     it('should correctly execute the loadUrl method with a basic html page', function(done) {
     
         this.automatedBrowserManager.loadUrl(
@@ -256,20 +270,6 @@ describe('AutomatedBrowserManagerTest', function() {
         }];
     
         this.automatedBrowserManager.assertUrlsRedirect(expected, done);
-    });
-    
-    
-    it('should correctly execute the waitTillElementExists method', function(done) {
-        
-        // TODO
-        done();
-    });
-    
-    
-    it('should correctly execute the waitTillIdExists method', function(done) {
-        
-        // TODO
-        done();
     });
     
     

@@ -195,6 +195,70 @@ export class AutomatedBrowserManager {
     
     
     /**
+     * Wait till the provided list of elements is found on the current document or fail after the timeout has passed  
+     * 
+     * @param elements A list with the name for the html elements that we are looking for
+     * @param completeCallback A method that will be called once the specified elements are found
+     */
+    waitTillElementsExist(elements:string[], completeCallback: () => void){
+        
+        let recursiveCaller = (elements: any[], completeCallback: () => void) => {
+            
+            if(elements.length <= 0){
+                
+                return completeCallback();
+            }
+            
+            let element = elements.shift();
+            
+            this.driver.wait(this.webdriver.until.elementLocated(this.webdriver.By.xpath("//" + element)), this.waitTimeout)
+                .then(() => {
+                    
+                    recursiveCaller(elements, completeCallback);
+                    
+                }).catch((e:Error) => {
+                
+                throw new Error('Error trying to find element: ' + element + '\n' + e.toString());
+            });
+        }
+        
+        recursiveCaller(elements, completeCallback);
+    }
+    
+    
+    /**
+     * Wait till the elements for the provided list of ids are found on the current document or fail after the timeout has passed  
+     * 
+     * @param ids A list with the ids for the html elements that we are looking for
+     * @param completeCallback A method that will be called once the specified elements are found
+     */
+    waitTillIdsExist(ids:string[], completeCallback: () => void){
+        
+        let recursiveCaller = (ids: any[], completeCallback: () => void) => {
+            
+            if(ids.length <= 0){
+                
+                return completeCallback();
+            }
+            
+            let id = ids.shift();
+            
+            this.driver.wait(this.webdriver.until.elementLocated(this.webdriver.By.xpath("//*[@id='" + id + "']")), this.waitTimeout)
+                .then(() => {
+                    
+                    recursiveCaller(ids, completeCallback);
+                    
+                }).catch((e:Error) => {
+                
+                throw new Error('Error trying to find id: ' + id + '\n' + e.toString());
+            });
+        }
+        
+        recursiveCaller(ids, completeCallback);
+    }
+    
+    
+    /**
      * Request the browser instance to load the specified URL.
      * If we have defined any wildcard, they will be replaced on the url before requesting it on the browser.
      * 
@@ -648,38 +712,6 @@ export class AutomatedBrowserManager {
 
             throw new Error(e.message);
         }
-    }
-    
-    
-    /**
-     * Wait till the provided element is found on the current document or fail after the timeout has passed  
-     * 
-     * @param element The name for the html element that we are looking for
-     * @param completeCallback A method that will be called once the specified element is found
-     */
-    waitTillElementExists(element:string, completeCallback: () => void){
-        
-        this.driver.wait(this.webdriver.until.elementLocated(this.webdriver.By.xpath("//" + element)), this.waitTimeout)
-            .then(completeCallback).catch((e:Error) => {
-            
-            throw new Error('Error trying to find element: ' + element + '\n' + e.toString());
-        });
-    }
-    
-    
-    /**
-     * Wait till the element with the provided id is found on the current document or fail after the timeout has passed  
-     * 
-     * @param id The id for the html element that we are looking for
-     * @param completeCallback A method that will be called once the specified element is found
-     */
-    waitTillIdExists(id:string, completeCallback: () => void){
-        
-        this.driver.wait(this.webdriver.until.elementLocated(this.webdriver.By.xpath("//*[@id='" + id + "']")), this.waitTimeout)
-            .then(completeCallback).catch((e:Error) => {
-            
-            throw new Error('Error trying to find id: ' + id + '\n' + e.toString());
-        });
     }
     
     
