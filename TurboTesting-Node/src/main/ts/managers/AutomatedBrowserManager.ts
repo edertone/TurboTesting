@@ -259,6 +259,18 @@ export class AutomatedBrowserManager {
     
     
     /**
+     * Wait till the specified number of milliseconds has passed.  
+     * 
+     * @param milliseconds The number of milliseconds that we want to wait
+     * @param completeCallback A method that will be called once the time has passed
+     */
+    waitMilliseconds(milliseconds:number, completeCallback: () => void){
+        
+        setTimeout(completeCallback, milliseconds);
+    }
+    
+    
+    /**
      * Request the browser instance to load the specified URL.
      * If we have defined any wildcard, they will be replaced on the url before requesting it on the browser.
      * 
@@ -716,34 +728,65 @@ export class AutomatedBrowserManager {
     
     
     /**
-     * Click on a document element  
+     * Click on one or more document elements (sequentially) by id.
      * 
-     * @param id The html id for the element that we want to click on
-     * @param completeCallback A method that will be called once the specified element is found and a click is performed
+     * @param id A single string with the id for the element which we want to click or a list of ids that will be sequentially clicked
+     *        one after the other. Any failure trying to click any of the provided ids will throw an exception
+     * @param completeCallback A method that will be called once the specified element or all the specified elements are found and a click is performed
+     * @param waitMilliseconds The number of milliseconds that we will wait between each click call, even if the ids are inmediately available
      */
-    clickById(id:string, completeCallback: () => void){
+    clickById(id:string|string[], completeCallback: () => void, waitMilliseconds = 1000){
         
-        this.clickByXpath("//*[@id='" + id + "']", completeCallback);
+        let ids = ArrayUtils.isArray(id) ? id as string[] : [id as string];
+        
+        for(let i = 0; i < ids.length; i++){
+            
+            ids[i] = "//*[@id='" + ids[i] + "']";
+        }
+        
+        this.clickByXpath(ids, completeCallback, waitMilliseconds);
     }
     
     
     /**
-     * Click on a document element
+     * Click on one or more document elements (sequentially) by xpath.
      * 
-     * @param xpath The xpath query that lets us find element which we want to click
-     * @param completeCallback A method that will be called once the specified element is found and a click is performed
+     * @param xpath A single string with the xpath query that lets us find the element which we want to click or a list of xpaths
+     *        that will be sequentially clicked one after the other. Any failure trying to click any of the provided xpaths will throw an exception
+     * @param completeCallback A method that will be called once the specified element or all the specified elements are found and a click is performed
+     * @param waitMilliseconds The number of milliseconds that we will wait between each click call, even if the xpath elements are inmediately available
      */
-    clickByXpath(xpath:string, completeCallback: () => void){
+    clickByXpath(xpath:string|string[], completeCallback: () => void, waitMilliseconds = 1000){
     
-        this.driver.wait(this.webdriver.until.elementLocated(this.webdriver.By.xpath(xpath)), this.waitTimeout)
-            .then((element: any) => {
+        let xpaths = ArrayUtils.isArray(xpath) ? xpath as string[] : [xpath as string];
+    
+        let recursiveCaller = (xpaths: string[], completeCallback: () => void) => {
             
-            element.click().then(completeCallback);
+            if(xpaths.length <= 0){
+                
+                return completeCallback();
+            }
+            
+            let path = xpaths.shift();
+            
+            this.driver.wait(this.webdriver.until.elementLocated(this.webdriver.By.xpath(path)), this.waitTimeout)
+                .then((element: any) => {
+                
+                element.click().then(() => {
+                    
+                    this.waitMilliseconds(xpaths.length <= 0 ? 0 : waitMilliseconds, () => {
+                        
+                        recursiveCaller(xpaths, completeCallback);
+                    });                    
+                });
+            
+            }).catch((e:Error) => {
+                
+                throw new Error('Error trying to click by: ' + path + '\n' + e.toString());
+            });
+        }
         
-        }).catch((e:Error) => {
-            
-            throw new Error('Error trying to click by: ' + xpath + '\n' + e.toString());
-        });
+        recursiveCaller(xpaths, completeCallback);        
     }
     
     
