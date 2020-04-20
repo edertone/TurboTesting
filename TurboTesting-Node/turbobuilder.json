@@ -5,7 +5,7 @@
 	"metadata": {
 		"name": "turbotesting-node",
 		"description": "General purpose cross-language library to improve automated testing productivity",
-		"builderVersion": "3.0.1"
+		"builderVersion": "4.0.0"
 	},
 	
 	"validate": {
@@ -31,14 +31,14 @@
     	    	{
     	    		"path": "extras/copyright headers/TsFiles-Header.txt",
     	    		"affectedPaths": ["src"],
-    	    		"includes": ["ts"],
+    	    		"includes": [".ts"],
     	    		"excludes": []
     	    	},
     	    	{
     	    		"path": "extras/copyright headers/JsFiles-Header.txt",
     	    		"affectedPaths": ["src"],
-    	    		"includes": ["js"],
-    	    		"excludes": []
+    	    		"includes": [".js"],
+    	    		"excludes": [".json"]
     	    	}
     	    ]
         }
