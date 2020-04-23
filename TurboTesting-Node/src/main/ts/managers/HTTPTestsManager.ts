@@ -89,14 +89,14 @@ export class HTTPTestsManager {
      * 
      * If any of the provided urls gives a 200 ok result or can be correctly loaded, the test will fail
      * 
-     * @param urls An array where each element can be a string containing the url that must fail, or an object that contains the following properties:
-     *        "url" the url to test
-     *        "postParameters" If defined, an object containing key pair values that will be sent as POST parameters to the url. If this property does not exist, the request will be a GET one.
-     *        "responseCode" If defined, the url response code must match the specified value
-     *        "is" If defined, the url response must be exactly the specified string
-     *        "contains" A string or an array of strings with texts that must exist on the url response (or null if not used)
-     *        "startWith" If defined, the url response must start with the specified text (or null if not used)
-     *        "endWith" If defined, the url response must end with the specified text (or null if not used)
+     * @param urls An array where each element can be a string containing the url that must fail, or an object that contains the following properties:<br>
+     *        "url" the url to test<br>
+     *        "postParameters" If defined, an object containing key pair values that will be sent as POST parameters to the url. If this property does not exist, the request will be a GET one.<br>
+     *        "responseCode" If defined, the url response code must match the specified value<br>
+     *        "is" If defined, the url response must be exactly the specified string<br>
+     *        "contains" A string or an array of strings with texts that must exist on the url response (or null if not used)<br>
+     *        "startWith" If defined, the url response must start with the specified text (or null if not used)<br>
+     *        "endWith" If defined, the url response must end with the specified text (or null if not used)<br>
      *        "notContains" A string or an array of strings with texts that must NOT exist on the url response (or null if not used)
      * @param completeCallback A method that will be called once all the urls from the list have been tested (If assert exceptions are disabled, the list of errors will also be found here).
      */
