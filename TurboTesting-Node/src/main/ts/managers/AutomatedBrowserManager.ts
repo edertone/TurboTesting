@@ -152,6 +152,10 @@ export class AutomatedBrowserManager {
         loggingPrefs.setLevel('browser', this.webdriver.logging.Level.ALL); 
         loggingPrefs.setLevel('driver', this.webdriver.logging.Level.ALL); 
         
+        // Make the console output less verbose (not the browser console, the cmd console!)
+        chromeOptions.addArguments('--disable-gpu');
+        chromeOptions.addArguments('--log-level=3');
+        
         // Instantiate the browser driver
         this.driver = new this.webdriver.Builder()
             .withCapabilities(chromeCapabilities)
