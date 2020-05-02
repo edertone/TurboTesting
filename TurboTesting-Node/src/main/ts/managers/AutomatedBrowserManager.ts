@@ -110,13 +110,15 @@ export class AutomatedBrowserManager {
     /**
      * Initialize this class to work with the google chrome browser.
      * The browser and the chromedriver application must be installed on the system. Chromedriver must be globally
-     * accessible via the command line input (added to the OS path)
+     * accessible via the command line input (added to the OS path) as chromedriver
      * 
      * @param language The language in which the browser will start
      * @param defaultDownloadPath If specified, all the downloadable links or files that are open by the automation
      *        will be stored on the provided fs path without any prompt.
+     * @param disableGPU If set to true, the chrome browser won't use GPU to accelerate rendering. This is recommended to
+     *        avoid having lots of useless gpu errors on the cmd output.
      */
-    initializeChrome(language = 'en', defaultDownloadPath = ''){
+    initializeChrome(language = 'en', defaultDownloadPath = '', disableGPU = true){
         
         // Check that chrome driver is available on our system
         try{
@@ -153,7 +155,11 @@ export class AutomatedBrowserManager {
         loggingPrefs.setLevel('driver', this.webdriver.logging.Level.ALL); 
         
         // Make the console output less verbose (not the browser console, the cmd console!)
-        chromeOptions.addArguments('--disable-gpu');
+        if(disableGPU){
+            
+            chromeOptions.addArguments('--disable-gpu');
+        }
+        
         chromeOptions.addArguments('--log-level=3');
         
         // Instantiate the browser driver
