@@ -67,6 +67,13 @@ describe('AutomatedBrowserManagerTest', function() {
     });
     
     
+    it('should correctly execute the waitTillXpathClickable method', function(done) {
+        
+        // TODO
+        done();
+    });
+    
+    
     it('should correctly execute the loadUrl method with a basic html page', function(done) {
     
         this.automatedBrowserManager.loadUrl(

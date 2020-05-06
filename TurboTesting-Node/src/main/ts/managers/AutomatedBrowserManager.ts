@@ -242,9 +242,9 @@ export class AutomatedBrowserManager {
      * @param ids A list with the ids for the html elements that we are looking for
      * @param completeCallback A method that will be called once the specified elements are found
      */
-    waitTillIdsExist(ids:string[], completeCallback: () => void){
+    waitTillIdsExist(ids:string|string[], completeCallback: () => void){
         
-        let recursiveCaller = (ids: any[], completeCallback: () => void) => {
+        let recursiveCaller = (ids: string[], completeCallback: () => void) => {
             
             if(ids.length <= 0){
                 
@@ -264,7 +264,33 @@ export class AutomatedBrowserManager {
             });
         }
         
-        recursiveCaller(ids, completeCallback);
+        let idsToSearch = ArrayUtils.isArray(ids) ? ids as string[] : [ids as string];
+        
+        recursiveCaller(idsToSearch, completeCallback);
+    }
+    
+    
+    /**
+     * Wait till the element which is found with the provided xpath expression is found, visible and enabled (ready to be clicked), or fail after the timeout has passed  
+     * 
+     * @param xpath The xpath expression to search for the element that must be clickable
+     * @param completeCallback A method that will be called once the specified element passes the wait conditions. The element instance will be passed to this method.
+     */
+    waitTillXpathClickable(xpath:string, completeCallback: (element: any) => void){
+        
+        this.driver.wait(this.webdriver.until.elementLocated(this.webdriver.By.xpath(xpath)), this.waitTimeout)
+            .then((element: any) => {
+            
+            this.driver.wait(this.webdriver.until.elementIsVisible(element), this.waitTimeout)
+                .then((element: any) => {
+            
+                this.driver.wait(this.webdriver.until.elementIsEnabled(element), this.waitTimeout)
+                    .then((element: any) => {
+                
+                    completeCallback(element);
+                }); 
+            }); 
+        });    
     }
     
     
@@ -779,8 +805,7 @@ export class AutomatedBrowserManager {
             
             let path = xpaths.shift();
             
-            this.driver.wait(this.webdriver.until.elementLocated(this.webdriver.By.xpath(path)), this.waitTimeout)
-                .then((element: any) => {
+            this.waitTillXpathClickable(path, (element: any) => {
                 
                 element.click().then(() => {
                     
@@ -788,11 +813,11 @@ export class AutomatedBrowserManager {
                         
                         recursiveCaller(xpaths, completeCallback);
                     });                    
-                });
-            
-            }).catch((e:Error) => {
                 
-                throw new Error('Error trying to click by: ' + path + '\n' + e.toString());
+                }).catch((e:Error) => {
+                
+                    throw new Error('Error trying to click by: ' + path + '\n' + e.toString());
+                });
             });
         }
         
