@@ -25,7 +25,7 @@ export class AssertUtils {
      *
      * @return void
      */
-    public static throwsException(callableFunction: () => void, expectedErrorRegexp: RegExp = undefined, assertionFailMessage = 'Expecting an exception that was not thrown'){
+    public static throwsException(callableFunction: () => void, expectedErrorRegexp: undefined|RegExp = undefined, assertionFailMessage = 'Expecting an exception that was not thrown'){
 
         if(typeof callableFunction !== 'function'){
 
