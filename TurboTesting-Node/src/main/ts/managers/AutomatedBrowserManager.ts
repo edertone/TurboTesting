@@ -43,7 +43,7 @@ export class AutomatedBrowserManager {
      * Contains all the log entries that have been generated for the currently loaded URL.
      * This array will be reset each time a new url is loaded by the browser.
      */
-    logEntries = [];
+    logEntries: any[] = [];
 
     
     /**
@@ -803,25 +803,46 @@ export class AutomatedBrowserManager {
                 return completeCallback();
             }
             
-            let path = xpaths.shift();
-            
-            this.waitTillXpathClickable(path, (element: any) => {
+            this._clickByXpathAux(xpaths.shift() as string, 5, () => {
                 
-                element.click().then(() => {
+                this.waitMilliseconds(xpaths.length <= 0 ? 0 : waitMilliseconds, () => {
                     
-                    this.waitMilliseconds(xpaths.length <= 0 ? 0 : waitMilliseconds, () => {
-                        
-                        recursiveCaller(xpaths, completeCallback);
-                    });                    
-                
-                }).catch((e:Error) => {
-                
-                    throw new Error('Error trying to click by: ' + path + '\n' + e.toString());
+                    recursiveCaller(xpaths, completeCallback);
                 });
-            });
+            });      
         }
         
-        recursiveCaller(xpaths, completeCallback);        
+        recursiveCaller(xpaths, completeCallback);   
+    }
+    
+    
+    /**
+     * Auxiliary method for the clickByXpath method. It will click on the provided xpath and retry the specified number of times if the click fails.
+     * 
+     * @param xpath A single string with the xpath query that lets us find the element which we want to click. Any failure trying to click will throw an exception
+     * @param attempts Number of times the wait for element to be clickable and click process will be retried before throwing an exception if click is not possible.
+     * @param completeCallback A method that will be called once the specified element is found and a click is performed
+     */
+    private _clickByXpathAux(xpath:string, attempts: number, completeCallback: () => void){
+    
+        this.waitTillXpathClickable(xpath, (element: any) => {
+                
+            element.click().then(() => {
+                
+                completeCallback();
+            
+            }).catch((e:Error) => {
+    
+                if(attempts <= 0){
+                    
+                    throw new Error('Error trying to click by: ' + xpath + '\n' + e.toString());
+                
+                }else{
+                    
+                    this._clickByXpathAux(xpath, attempts - 1, completeCallback); 
+                }
+            });
+        });
     }
     
     
