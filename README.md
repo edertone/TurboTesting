@@ -1,3 +1,3 @@
 # TurboTesting
 
-General purpose cross-language utilities to improve automated testing productivity
+General purpose cross-language library to improve automated testing productivity
