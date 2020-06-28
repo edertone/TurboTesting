@@ -158,6 +158,7 @@ export class HTTPTestsManager {
     
     /**
      * Test that all the urls on a given list (which will be loaded using HTTP POST) give the expected (valid response) results
+     * Note that urls will be executed one after the other in the same order as provided
      * 
      * If any of the provided urls fails any of the expected values, the test will fail
      * 
