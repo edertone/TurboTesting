@@ -763,6 +763,35 @@ export class AutomatedBrowserManager {
     }
     
     
+    /** TODO */
+    assertSnapshot(){
+        
+        // It should receive coordinates and dimensions from an area of the browser screen
+        // If the captured area already exists at the filesystem specified location and matches exactly with the provided percent with the actual browser area, test will pass.
+        // If not, test will fail. If the snapshot does not exist on filesystem, it will be created from the actual browser area and test will pass.
+        // Next time the assert is executed, the snapshot will be used to compare with the browser area again
+    }
+    
+    
+    /**
+     * This method will perform standard recursive tests on a full website provided its root link. The whole site will be tested
+     * on all its pages against broken links, valid html structure, valid css, ...
+     * 
+     * @param siteRoot The full url to the root of the site to test
+     * @param completeCallback A method that will be executed once all the tests have finished
+     */
+    assertWholeWebSite(siteRoot: string, completeCallback: () => void){
+        
+        this.loadUrl(siteRoot, (results) => {
+            
+            // TODO
+            console.log('TODO - Perform site recursive tests on ' + results.finalUrl);
+            
+            completeCallback();
+        });
+    }
+    
+    
     /**
      * Click on one or more document elements (sequentially) by id.
      * 
@@ -910,25 +939,6 @@ export class AutomatedBrowserManager {
         }).catch((e:Error) => {
             
             throw new Error('Error trying to get attribute by: ' + xpath + '\n' + e.toString());
-        });
-    }
-    
-    
-    /**
-     * This method will perform standard recursive tests on a full website provided its root link. The whole site will be tested
-     * on all its pages against broken links, valid html structure, valid css, ...
-     * 
-     * @param siteRoot The full url to the root of the site to test
-     * @param completeCallback A method that will be executed once all the tests have finished
-     */
-    assertWholeWebsite(siteRoot: string, completeCallback: () => void){
-        
-        this.loadUrl(siteRoot, (results) => {
-            
-            // TODO
-            console.log('TODO - Perform site recursive tests on ' + results.finalUrl);
-            
-            completeCallback();
         });
     }
     
