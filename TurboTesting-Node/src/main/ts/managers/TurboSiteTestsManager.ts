@@ -12,12 +12,21 @@ import { StringUtils } from 'turbocommons-ts';
 import { FilesManager } from 'turbodepot-node';
 
 
+declare function require(name: string): any;
+
+
 /**
  * TurboSiteTestsManager class
  *
  * @see constructor()
  */
 export class TurboSiteTestsManager {
+    
+    
+    /**
+     * Stores the NodeJs path instance
+     */
+    private path: any;
     
     
     /**
@@ -35,6 +44,7 @@ export class TurboSiteTestsManager {
      */
     constructor(private projectRootPath:string) {
         
+        this.path = require('path');
         this.filesManager = new FilesManager();
     }
     
@@ -44,17 +54,30 @@ export class TurboSiteTestsManager {
      */
     getWildcards(){
         
+        let dirSep = this.filesManager.dirSep();
         let turboBuilderSetup = this.getSetup('turbobuilder');
         let turboSiteSetup = this.getSetup('turbosite');
 
-        // TODO - per trobar el cache hash, mirem si a la carpeta de projecte que ens han passat existeix
-        // una carpeta target. A partir d'aqui, busquem el index.php corresponent, en llegim el site setup
-        // i d'alla podrem treure el cache hash.
-        
         // TODO - This must be improved.
         // Projectname fails here if we are testing a release compiled version
-        // let projectName = turboBuilderSetup.metadata.name;
+        let projectName = (turboBuilderSetup.metadata.name === '') ?
+            StringUtils.getPathElement(this.path.resolve(this.projectRootPath)) :
+            turboBuilderSetup.metadata.name;
         
+        // Look for the generated project cache hash string.
+        // To get it, we load the site setup data from the index file that is located on the target folder (if exists).
+        // The cache hash string is stored there
+        let cacheHash = '';
+        
+        let targetSitePath = this.projectRootPath + dirSep + 'target' + dirSep + projectName + dirSep + 'dist' + dirSep + 'site';
+        
+        if(this.filesManager.isDirectory(targetSitePath)){
+        
+            let targetSiteSetup = this.getSetupFromIndexPhp('turbosite', targetSitePath + dirSep + 'index.php');   
+            
+            cacheHash = targetSiteSetup.cacheHash;
+        }
+
         // TODO - the way in which we are obtaining the $hostRoot value should be improved cause it 
         // uses several splits that may give wrong values some time... It should be better to use the StringUtils
         // getHostNameFromUrl method, but it now only works with browsers cause it relies on the anchor element to
@@ -65,7 +88,7 @@ export class TurboSiteTestsManager {
             "$hostRoot": turboBuilderSetup.sync.remoteUrl.split('://')[1].split('/')[0],
             "$locale": turboSiteSetup.locales[0].split('_')[0],
             "$homeView": turboSiteSetup.homeView,
-            "$cacheHash": 'TODO - how to find this?',
+            "$cacheHash": cacheHash,
             "$baseURL": turboSiteSetup.baseURL === '' ? '' : '/' + turboSiteSetup.baseURL
         };
     }
