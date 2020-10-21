@@ -36,7 +36,9 @@ export class TurboSiteTestsManager {
 
     
     /**
-     * Class with methods that help when testing Turbosite-Php projects
+     * Class with methods that help when testing Turbosite-Php projects.
+     * We can obtain useful paths to the project, its compiled target folder or publish sync folder,
+     * read the setup files, modify the target contents, etc...
      * 
      * @param projectRootPath Full filesystem path to the root of the project we are testing
      * 
@@ -46,11 +48,76 @@ export class TurboSiteTestsManager {
         
         this.path = require('path');
         this.filesManager = new FilesManager();
+        
+        if(!this.filesManager.isFile(this.projectRootPath + this.filesManager.dirSep() + 'turbosite.json')){
+            
+            throw new Error('turbosite.json file not found, specified projectRootPath must be a valid site_php project');
+        }
     }
     
     
     /**
-     * TODO - Finish this method and document it
+     * Obtain the filesystem path to the root of the target/ project folder. If it does not exist, an exception will be thrown
+     * 
+     * @return The target file system path
+     */
+    getTargetPath(){
+        
+        if(!this.filesManager.isDirectory(this.projectRootPath + this.filesManager.dirSep() + 'target')){
+            
+            throw new Error('target folder does not exist, project may not be compiled');
+        }
+    
+        return this.projectRootPath + this.filesManager.dirSep() + 'target';    
+    }
+    
+    
+    /**
+     * Obtain the filesystem path to the root of the folder where the project has been published / synced. 
+     * 
+     * @return The synced folder file system path
+     */
+    getSyncDestPath(){
+    
+        let turboBuilderSetup = this.getSetup('turbobuilder');
+        
+        if(!this.filesManager.isDirectory(turboBuilderSetup.sync.destPath + this.filesManager.dirSep() + 'site') ||
+           !this.filesManager.isFile(turboBuilderSetup.sync.destPath + this.filesManager.dirSep() + '.htaccess')){
+            
+            throw new Error('Project has not been published / synced so syncDestPath does not contain a valid published site_php project');
+        }
+        
+        return turboBuilderSetup.sync.destPath;    
+    }
+    
+    
+    /**
+     * Obtain the name that's been defined for the current project 
+     * 
+     * @return The project name
+     */
+    getProjectname(){
+        
+        let turboBuilderSetup = this.getSetup('turbobuilder');
+        
+        // TODO - This must be improved.
+        // Projectname fails here if we are testing a release compiled version
+        return (turboBuilderSetup.metadata.name === '') ?
+            StringUtils.getPathElement(this.path.resolve(this.projectRootPath)) :
+            turboBuilderSetup.metadata.name;
+    }
+    
+    
+    /**
+     * Obtain an object containing all the wildcards that may be used by the tests and their respective real values.
+     * 
+     * @return An object with the following values:
+     *         - $host: The full host where the site is published, including any subfolders till the root of the project url.
+     *         - $hostRoot: The full host where the site is published, excluding all subfolders till the root of the project url.
+     *         - $locale: The first of the preferred languages as they are defined on the turbosite setup file
+     *         - $homeView: The name for the view that is defined as the home view for the project
+     *         - $cacheHash: The cache hash string that has been generated after compiling the project to avoid browsers from caching some resources
+     *         - $baseURL: The project baseurl as it is defined on the turbosite setup file 
      */
     getWildcards(){
         
@@ -58,18 +125,12 @@ export class TurboSiteTestsManager {
         let turboBuilderSetup = this.getSetup('turbobuilder');
         let turboSiteSetup = this.getSetup('turbosite');
 
-        // TODO - This must be improved.
-        // Projectname fails here if we are testing a release compiled version
-        let projectName = (turboBuilderSetup.metadata.name === '') ?
-            StringUtils.getPathElement(this.path.resolve(this.projectRootPath)) :
-            turboBuilderSetup.metadata.name;
-        
         // Look for the generated project cache hash string.
         // To get it, we load the site setup data from the index file that is located on the target folder (if exists).
         // The cache hash string is stored there
         let cacheHash = '';
         
-        let targetSitePath = this.projectRootPath + dirSep + 'target' + dirSep + projectName + dirSep + 'dist' + dirSep + 'site';
+        let targetSitePath = this.getTargetPath() + dirSep + this.getProjectname() + dirSep + 'dist' + dirSep + 'site';
         
         if(this.filesManager.isDirectory(targetSitePath)){
         
@@ -95,7 +156,7 @@ export class TurboSiteTestsManager {
     
     
     /**
-     * Obtain the requested setup data as a fully initialized object from the project that is currently defined as root on this class.
+     * Obtain the requested setup data as a fully initialized object from the source code of the project that is currently defined as root on this class.
      * 
      * @param setupName The name for a setup that we want to read from the current project. This must be the same name that is
      *        defined on the physical .json file that stores the setup. For example: "turbosite" to get the "turbosite.json" setup
@@ -111,11 +172,13 @@ export class TurboSiteTestsManager {
 
 
     /**
-     * Obtain the requested setup data as a fully initialized object from the index.php file of a compiled TurboSite-Php project.
+     * Obtain the requested setup data as a fully initialized object from the index.php file.
+     *
+     * NOTE: We will use this method for index.php files that are compiled (on target or sync dest folder). Do not use on the source code
+     * index.php file, cause it must not contain the compiled json setup data  
      * 
      * @param setupName The name for a setup that we want to read from the specified index.php file. This must be the same name that is
      *        defined on the physical .json file that stores the setup before compilation. For example: "turbosite" to get the "turbosite.json" setup
-     *        
      * @param indexPhpPath The full file system path to the compiled index.php file from which we want to read the setup data. 
      *
      * @return An object containing all the requested setup data
@@ -132,6 +195,9 @@ export class TurboSiteTestsManager {
 
     /**
      * Save the specified setup data object into the specified index.php file with the specified setup name.
+     *
+     * NOTE: We will use this method to alter compiled index.php files (on target or sync dest folder). Do not use on the source code
+     * index.php file, cause it must not contain the compiled json setup data  
      * 
      * If the setup json string already exists on the index.php file, it will be overriden, otherwise a new line will be
      * added to the index.php file containing the provided setup data with the specified name.
