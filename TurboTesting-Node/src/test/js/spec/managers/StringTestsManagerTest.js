@@ -24,8 +24,7 @@ describe('StringTestsManagerTest', function() {
 
     
     afterEach(function() {
-  
-        
+     
     });
     
     

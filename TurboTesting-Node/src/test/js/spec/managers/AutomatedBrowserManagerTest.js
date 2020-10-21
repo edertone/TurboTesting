@@ -19,8 +19,6 @@ describe('AutomatedBrowserManagerTest', function() {
 
     beforeAll(function() {
         
-        jasmine.DEFAULT_TIMEOUT_INTERVAL = 2500011;
-        
         this.automatedBrowserManager = new AutomatedBrowserManager();     
         this.automatedBrowserManager.initializeChrome();
     });

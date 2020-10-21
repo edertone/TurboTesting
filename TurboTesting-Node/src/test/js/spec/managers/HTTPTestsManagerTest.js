@@ -18,8 +18,6 @@ const { HTTPTestsManager } = require(projectRoot + '/target/turbotesting-node/di
 describe('HTTPTestsManagerTest', function() {
     
     beforeAll(function() {
-        
-        jasmine.DEFAULT_TIMEOUT_INTERVAL = 2500000;
     });
 
     
