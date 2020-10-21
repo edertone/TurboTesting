@@ -49,9 +49,9 @@ export class TurboSiteTestsManager {
         this.path = require('path');
         this.filesManager = new FilesManager();
         
-        if(!this.filesManager.isFile(this.projectRootPath + this.filesManager.dirSep() + 'turbosite.json')){
+        if(!this.filesManager.isFile(this.projectRootPath + this.filesManager.dirSep() + 'turbobuilder.json')){
             
-            throw new Error('turbosite.json file not found, specified projectRootPath must be a valid site_php project');
+            throw new Error('turbobuilder.json file not found, specified projectRootPath must be a valid project');
         }
     }
     
