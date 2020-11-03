@@ -312,8 +312,8 @@ export class AutomatedBrowserManager {
      * 
      * @param url The url we want to open with the browser
      * @param completeCallback A method that will be executed once the url loading finishes. A single results object will be passed
-     *        to this method, containing all the loaded page information we may need: title, source and finalUrl (in case any redirection
-     *        happened from the original url)
+     *        to this method, containing all the loaded page information we may need: title, source (may have been altered by the browser after loading is complete) 
+     *        and finalUrl (in case any redirection happened from the original url)
      */
     loadUrl(url: string, completeCallback: (results: {title:string; source:any; finalUrl:string}) => void){
         
@@ -567,7 +567,7 @@ export class AutomatedBrowserManager {
                                 return;
                             }
                             
-                            // If the url to test is belongs to a local file, we will directly get the source code from there.
+                            // If the url to test belongs to a local file, we will directly get the source code from there.
                             let urlLocalFileContents = '';
                                 
                             try {
@@ -699,7 +699,7 @@ export class AutomatedBrowserManager {
         // Fail if list has duplicate values
         if(ArrayUtils.hasDuplicateElements(urls.map(l => l.url))){
             
-            throw new Error('AutomatedBrowserManager.assertUrlsRedirect duplicate urls: ' + ArrayUtils.getDuplicateElements(urls.map(l => l.url)).join('\n'));
+            throw new Error('duplicate urls: ' + ArrayUtils.getDuplicateElements(urls.map(l => l.url)).join('\n'));
         }
         
         let anyErrors: string[] = [];
@@ -711,7 +711,7 @@ export class AutomatedBrowserManager {
                 
                 if(anyErrors.length > 0){
                     
-                    throw new Error(`AutomatedBrowserManager.assertUrlsRedirect failed with ${anyErrors.length} errors:\n` + anyErrors.join('\n'));
+                    throw new Error(`failed with ${anyErrors.length} errors:\n` + anyErrors.join('\n'));
                 }
                 
                 return completeCallback();
