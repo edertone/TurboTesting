@@ -28,6 +28,21 @@ describe('StringTestsManagerTest', function() {
     });
     
     
+    it('should correctly generate html validation regexps with getRegExpToValidateHtmlDoc when several values are provided for head and body', function() {
+
+        expect(this.sut.getRegExpToValidateHtml5()).toEqual(/^<!doctype html>( |\n|\r)*<html.*<head>.*.*.*<\/head>.*<body>.*.*.*<\/body>.*<\/html>$/s);
+        
+        expect(this.sut.getRegExpToValidateHtml5(/<title>Download TurboDepot<\/title>/))
+            .toEqual(/^<!doctype html>( |\n|\r)*<html.*<head>.*<title>Download TurboDepot<\/title>.*<\/head>.*<body>.*.*.*<\/body>.*<\/html>$/s);
+        
+        expect(this.sut.getRegExpToValidateHtml5(null, /<a href=".*">Download<\/a>/))
+            .toEqual(/^<!doctype html>( |\n|\r)*<html.*<head>.*.*.*<\/head>.*<body>.*<a href=".*">Download<\/a>.*<\/body>.*<\/html>$/s);
+        
+        expect(this.sut.getRegExpToValidateHtml5(/<title>Download TurboDepot<\/title>/, /<a href=".*">Download<\/a>/))
+            .toEqual(/^<!doctype html>( |\n|\r)*<html.*<head>.*<title>Download TurboDepot<\/title>.*<\/head>.*<body>.*<a href=".*">Download<\/a>.*<\/body>.*<\/html>$/s);
+    });
+    
+    
     it('should correctly replace wildcards on text with replaceWildCardsOnText method', function() {
 
         expect(this.sut.replaceWildCardsOnText('$a $bb $ccc', {$a: "1", $bb: "2", $ccc: "3"})).toBe('1 2 3');

@@ -367,10 +367,12 @@ export class AutomatedBrowserManager {
      *        "sourceHtmlStartsWith" The html source code must start with the specified text<br>
      *        "sourceHtmlEndsWith" The html source code must end with the specified text<br>
      *        "sourceHtmlContains" A string or an array of strings with texts that must exist in the same order on the html source code.<br>
+     *        "sourceHtmlRegExp" A regular expression that will be evaluated against the source code and must match.<br>
      *        "sourceHtmlNotContains" A string or an array of strings with texts tat must NOT exist on the html source code<br>
      *        "loadedHtmlStartsWith" If defined, the html code that is loaded (and maybe altered) by the browser must start with the specified text<br>
      *        "loadedHtmlEndsWith" If defined, the html code that is loaded (and maybe altered) by the browser must end with the specified text<br>
      *        "loadedHtmlContains" A string or an array of strings with texts that must exist in the same order on the html code that is loaded (and maybe altered) by the browser<br>
+     *        "loadedHtmlRegExp" A regular expression that will be evaluated against the html code that is loaded (and maybe altered) by the browser and must match.<br>
      *        "loadedHtmlNotContains" A string or an array of strings with texts tat must NOT exist on the html code that is loaded (and maybe altered) by the browser
      *        
      * @param completeCallback A method that will be called once all the tests have been successfully executed on the current browser state
@@ -387,8 +389,8 @@ export class AutomatedBrowserManager {
         try {
             
             this.objectTestsManager.assertObjectProperties(asserts,
-                    ['url', 'titleContains', 'ignoreConsoleErrors', 'sourceHtmlContains', 'sourceHtmlStartsWith', 'sourceHtmlEndsWith',
-                     'sourceHtmlNotContains', 'loadedHtmlContains', 'loadedHtmlStartsWith', 'loadedHtmlEndsWith', 'loadedHtmlNotContains'], false);
+                    ['url', 'titleContains', 'ignoreConsoleErrors', 'sourceHtmlContains', 'sourceHtmlRegExp', 'sourceHtmlStartsWith', 'sourceHtmlEndsWith',
+                     'sourceHtmlNotContains', 'loadedHtmlStartsWith', 'loadedHtmlEndsWith', 'loadedHtmlContains', 'loadedHtmlRegExp', 'loadedHtmlNotContains'], false);
                  
         } catch (e) {
         
@@ -409,7 +411,7 @@ export class AutomatedBrowserManager {
             }
             
             // An auxiliary method that is used to validate the specified html code with the specified asserts
-            let validateHtml = (html: string, url: string, startsWith: string, endsWith: string, notContains: string, contains: string) => {
+            let validateHtml = (html: string, url: string, startsWith: string, endsWith: string, notContains: string, contains: string, regExp: RegExp) => {
                 
                 if(startsWith !== null){
                     
@@ -462,6 +464,11 @@ export class AutomatedBrowserManager {
                      
                         anyErrors.push(e.toString());
                     }
+                }
+                
+                if(regExp !== null && !regExp.test(html)){
+
+                    anyErrors.push(`\nSource does not match rexExp:\n${regExp.toString()}\nfor the url: ${url}`);
                 }
             }
             
@@ -553,14 +560,16 @@ export class AutomatedBrowserManager {
                                     asserts.hasOwnProperty('loadedHtmlStartsWith') ? asserts.loadedHtmlStartsWith : null,
                                     asserts.hasOwnProperty('loadedHtmlEndsWith') ? asserts.loadedHtmlEndsWith : null,
                                     asserts.hasOwnProperty('loadedHtmlNotContains') ? asserts.loadedHtmlNotContains : null,
-                                    asserts.hasOwnProperty('loadedHtmlContains') ? asserts.loadedHtmlContains : null);
+                                    asserts.hasOwnProperty('loadedHtmlContains') ? asserts.loadedHtmlContains : null,
+                                    asserts.hasOwnProperty('loadedHtmlRegExp') ? asserts.loadedHtmlRegExp : null);
                             
                             // In case none of the real source code assertions have been defined, we will finish here, to avoid performing an unnecessary
                             // http request to obtain the real source code.
                             if((!asserts.hasOwnProperty('sourceHtmlStartsWith') || asserts.sourceHtmlStartsWith === null) &&
                                (!asserts.hasOwnProperty('sourceHtmlEndsWith') || asserts.sourceHtmlEndsWith === null) &&
                                (!asserts.hasOwnProperty('sourceHtmlNotContains') || asserts.sourceHtmlNotContains === null) &&
-                               (!asserts.hasOwnProperty('sourceHtmlContains') || asserts.sourceHtmlContains === null)){
+                               (!asserts.hasOwnProperty('sourceHtmlContains') || asserts.sourceHtmlContains === null),
+                               (!asserts.hasOwnProperty('sourceHtmlRegExp') || asserts.sourceHtmlRegExp === null)){
                                 
                                 finish();
                                 
@@ -584,7 +593,8 @@ export class AutomatedBrowserManager {
                                         asserts.hasOwnProperty('sourceHtmlStartsWith') ? asserts.sourceHtmlStartsWith : null,
                                         asserts.hasOwnProperty('sourceHtmlEndsWith') ? asserts.sourceHtmlEndsWith : null,
                                         asserts.hasOwnProperty('sourceHtmlNotContains') ? asserts.sourceHtmlNotContains : null,
-                                        asserts.hasOwnProperty('sourceHtmlContains') ? asserts.sourceHtmlContains : null);
+                                        asserts.hasOwnProperty('sourceHtmlContains') ? asserts.sourceHtmlContains : null,
+                                        asserts.hasOwnProperty('sourceHtmlRegExp') ? asserts.sourceHtmlRegExp : null);
                                 
                                 finish();
                                 
@@ -608,7 +618,8 @@ export class AutomatedBrowserManager {
                                         asserts.hasOwnProperty('sourceHtmlStartsWith') ? asserts.sourceHtmlStartsWith : null,
                                         asserts.hasOwnProperty('sourceHtmlEndsWith') ? asserts.sourceHtmlEndsWith : null,
                                         asserts.hasOwnProperty('sourceHtmlNotContains') ? asserts.sourceHtmlNotContains : null,
-                                        asserts.hasOwnProperty('sourceHtmlContains') ? asserts.sourceHtmlContains : null);
+                                        asserts.hasOwnProperty('sourceHtmlContains') ? asserts.sourceHtmlContains : null,
+                                        asserts.hasOwnProperty('sourceHtmlRegExp') ? asserts.sourceHtmlRegExp : null);
                                  };
 
                                 // Once the request to get the real browser code is done, we will check if any error has happened

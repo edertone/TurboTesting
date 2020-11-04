@@ -29,6 +29,29 @@ export class StringTestsManager {
     
     
     /**
+     * Generate a regular expression that can be used to validate an HTML5 document structure.
+     * It will chech that the document starts and ends correctly and its html tags are correct and in the right order. 
+     * We can also provide our custom regular expressions to test anything we want inside the <head> and <body> tags 
+     *
+     * @param headContents A regular expression that will be used to test the contents of the <head> section of the html document
+     * @param bodyContents A regular expression that will be used to test the contents of the <body> section of the html document
+     * 
+     * @return A regular expression object that is ready to validate any html5 document
+     */
+    getRegExpToValidateHtml5(headContents:null|RegExp = null, bodyContents:null|RegExp = null){
+    
+        headContents = headContents === null ? /.*/ : headContents;
+        bodyContents = bodyContents === null ? /.*/ : bodyContents;
+        
+        let resultRegExp = '^<!doctype html>( |\n|\r)*<html.*<head>.*' + headContents.source + '.*<\/head>';
+        
+        resultRegExp += '.*<body>.*' + bodyContents.source + '.*<\/body>.*<\/html>$';
+        
+        return new RegExp(resultRegExp, 's');
+    }
+    
+    
+    /**
      * Replace all the occurences of the provided wildcard values into the given text
      * 
      * @param text A text where the replacement will take place
