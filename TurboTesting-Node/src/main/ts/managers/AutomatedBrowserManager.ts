@@ -47,6 +47,14 @@ export class AutomatedBrowserManager {
 
     
     /**
+     * A value that can be specified to ignore all the browser console errors matching any of the provided
+     * strings. This list of ignore strings will apply to all the assert methods executed on this instance, so it
+     * can be avoided to specify those values at each one of the method calls
+     */
+    ignoreConsoleErrors = [];
+    
+    
+    /**
      * The selenium webdriver instance used to manage the browser automation
      */
     private driver: any = null;
@@ -532,9 +540,10 @@ export class AutomatedBrowserManager {
                                     let errorMustBeThrown = true;
                                     
                                     // All the browser logs which contain any of the texts on the ignoreConsoleErrors array will be ignored 
-                                    if(asserts.hasOwnProperty('ignoreConsoleErrors') && ArrayUtils.isArray(asserts.ignoreConsoleErrors)){
+                                    if(this.ignoreConsoleErrors.length > 0 ||
+                                       (asserts.hasOwnProperty('ignoreConsoleErrors') && ArrayUtils.isArray(asserts.ignoreConsoleErrors))){
                                         
-                                        for (let ignoreConsoleError of asserts.ignoreConsoleErrors) {
+                                        for (let ignoreConsoleError of this.ignoreConsoleErrors.concat(asserts.ignoreConsoleErrors)) {
                 
                                             if(logEntry.message.indexOf(ignoreConsoleError) >= 0){
                                                 

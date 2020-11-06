@@ -204,6 +204,24 @@ describe('AutomatedBrowserManagerTest', function() {
             this.automatedBrowserManager.assertBrowserState(expected, done);    
         });
     });
+    
+    
+    it('should correctly ignore the console errors when specified globally by the instance ignoreConsoleErrors property', function(done) {
+        
+        this.automatedBrowserManager.ignoreConsoleErrors = ['myFunction is not defined'];
+        
+        this.automatedBrowserManager.loadUrl(
+            projectRoot + '/src/test/resources/managers/automatedBrowserManager/basic-html/basic-with-error-js.html', (results) => {
+        
+            let expected = {
+                url: "basic-with-error-js.html",
+                titleContains: "Convert text to camel case online",
+                sourceHtmlContains: "myFunction()"
+            };
+    
+            this.automatedBrowserManager.assertBrowserState(expected, done);    
+        });
+    });
 
 
     it('should throw exceptions when executing the assertBrowserState method with wrong values', function(done) {
