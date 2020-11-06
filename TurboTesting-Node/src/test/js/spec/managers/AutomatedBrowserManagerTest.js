@@ -173,10 +173,12 @@ describe('AutomatedBrowserManagerTest', function() {
                 loadedHtmlStartsWith: '<html',
                 loadedHtmlEndsWith: "</html>",
                 loadedHtmlContains: ['Google'],
+                loadedHtmlRegExp: /Google/,
                 loadedHtmlNotContains: 'nottocontaintextstring',
                 sourceHtmlStartsWith: '<!doctype html>',
                 sourceHtmlEndsWith: "</html>",
                 sourceHtmlContains: ['Google'],
+                sourceHtmlRegExp: /Google/,
                 sourceHtmlNotContains: 'nottocontaintextstring'
             };
     
