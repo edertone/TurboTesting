@@ -356,7 +356,7 @@ export class AutomatedBrowserManager {
             
         }).catch((e:Error) => {
             
-            throw new Error('Error in loadUrl calling driver.get: ' + e.toString());
+            throw new Error('Error in loadUrl calling driver.get for ' + url +':\n' + e.toString());
         });
     }
     
@@ -960,6 +960,43 @@ export class AutomatedBrowserManager {
             
             throw new Error('Error trying to get attribute by: ' + xpath + '\n' + e.toString());
         });
+    }
+    
+    
+    /**
+     * Allows us to secuentially execute any of this class methods one after the other by chaining them via the completeCallback method.
+     * It is basically a shortcut to execute several browser automations one after the other with a compact syntax
+     * 
+     * @param queries An array of arrays where each element will define a single call to one of the class methods. First element must be the
+     *        method name and next ones the method parameter values. Each call will wait till the completeCallback is executed, and then the 
+     *        next of the list will be called, till all finish. If any error happens, execution will be interrupted.
+     * @param completeCallback A method that will be called once all the calls of the query have been executed correctly.
+     */
+    queryCalls(queries: any[], completeCallback: () => void){
+        
+        let recursiveCaller = (queries: any[], completeCallback: () => void) => {
+            
+            if(queries.length <= 0){
+                
+                return completeCallback();
+            }
+            
+            let query = queries.shift();
+            
+            if((this as any)[query[0]]) {
+                
+                (this as any)[query[0]](query[1], () => {
+                    
+                    recursiveCaller(queries, completeCallback);
+                });
+            
+            }else{
+                
+                throw new Error('Specified method to query does not exist: ' + query[0]);
+            }
+        }
+        
+        recursiveCaller(queries, completeCallback); 
     }
     
     
