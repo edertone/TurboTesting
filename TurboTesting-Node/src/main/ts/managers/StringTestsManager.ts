@@ -40,12 +40,12 @@ export class StringTestsManager {
      */
     getRegExpToValidateHtml5(headContents:null|RegExp = null, bodyContents:null|RegExp = null){
     
-        headContents = headContents === null ? /.*/ : headContents;
-        bodyContents = bodyContents === null ? /.*/ : bodyContents;
+        let headContentsString = (headContents === null) ? '.*' : '.*' + headContents.source + '.*';
+        let bodyContentsString = (bodyContents === null) ? '.*' : '.*' + bodyContents.source + '.*';
         
-        let resultRegExp = '^<!doctype html>( |\n|\r)*<html.*<head>.*' + headContents.source + '.*<\/head>';
+        let resultRegExp = '^<!doctype html>( |\n|\r)*<html.*<head>' + headContentsString + '<\/head>';
         
-        resultRegExp += '.*<body>.*' + bodyContents.source + '.*<\/body>.*<\/html>$';
+        resultRegExp += '.*<body>' + bodyContentsString + '<\/body>.*<\/html>$';
         
         return new RegExp(resultRegExp, 's');
     }
