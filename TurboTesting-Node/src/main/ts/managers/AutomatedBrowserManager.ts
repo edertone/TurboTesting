@@ -896,6 +896,42 @@ export class AutomatedBrowserManager {
     
     
     /**
+     * Remove all text for the specified document element
+     * 
+     * @param id The html id for the element from which we want to clear the text
+     * @param completeCallback A method that will be called once the specified element is found and the text is cleared
+     */
+    clearInputById(id:string, completeCallback: () => void){
+        
+        this.clearInputByXpath("//*[@id='" + id + "']", completeCallback);
+    }
+    
+    
+    /**
+     * Remove all text for the specified document element
+     * 
+     * @param xpath The xpath query that lets us find element from which we want to clear the text
+     * @param completeCallback A method that will be called once the specified element is found and the text is cleared
+     */
+    clearInputByXpath(xpath:string, completeCallback: () => void){
+        
+        this.driver.wait(this.webdriver.until.elementLocated(this.webdriver.By.xpath(xpath)), this.waitTimeout)
+            .then((element: any) => {
+            
+            element.clear().then(() => {
+                
+                // We send a backspace key to make sure that the key change events are fired on the component
+                element.sendKeys("\b").then(completeCallback);
+            });
+        
+        }).catch((e:Error) => {
+            
+            throw new Error('Error trying to clear input by: ' + xpath + '\n' + e.toString());
+        });
+    }
+    
+    
+    /**
      * Send text to the specified document element 
      * 
      * @param id The html id for the element that we want to send text to
@@ -981,18 +1017,27 @@ export class AutomatedBrowserManager {
                 return completeCallback();
             }
             
-            let query = queries.shift();
+            let query = queries[0];
+            let functionName = query[0];
             
-            if((this as any)[query[0]]) {
+            if((this as any)[functionName]) {
                 
-                (this as any)[query[0]](query[1], () => {
+                let functionObject = (this as any)[functionName];
+            
+                if(functionObject.length !== query.length){
                     
-                    recursiveCaller(queries, completeCallback);
-                });
+                    throw new Error('Method ' + functionName + ' expects ' + (functionObject.length - 1) + ' arguments, but received ' + (query.length - 1));
+                }
+                
+                // Run the method, passing all the specified parameters and adding a call to the recursive caller as the last parameter
+                functionObject.apply(this, query.slice(1).concat(() => {
+                    
+                    recursiveCaller(queries.slice(1), completeCallback);
+                }));
             
             }else{
                 
-                throw new Error('Specified method to query does not exist: ' + query[0]);
+                throw new Error('Specified method to query does not exist: ' + functionName);
             }
         }
         
