@@ -180,6 +180,58 @@ export class AutomatedBrowserManager {
     
     
     /**
+     * Specify the size and position for the main browser window. This method can be called at any time
+     *
+     * @param width The desired browser width
+     * @param height The desired browser height
+     * @param x The desired browser left corner position
+     * @param y The desired browser top corner position
+     * @param completeCallback A method that will be executed once the process finishes correctly
+     */
+    setBrowserSizeAndPosition(width: number, height: number, x = 0, y = 0,  completeCallback: () => void){
+      
+        this.driver.manage().window().setRect({height: height, width: width, x: x, y: y}).then(completeCallback);
+    }
+    
+    
+    /**
+     * Maximize the browser window just like clicking on the OS maximize button. This method can be called at any time
+     *
+     * @param completeCallback A method that will be executed once the process finishes correctly
+     */
+    setBrowserAsMaximized(completeCallback: () => void){
+      
+        this.driver.manage().window().maximize().then(completeCallback);
+    }
+    
+    
+    /**
+     * Set the full screen state for the browser window. This method can be called at any time
+     *
+     * @param completeCallback A method that will be executed once the process finishes correctly
+     */
+    setBrowserAsFullScreen(completeCallback: () => void){
+      
+        this.driver.manage().window().fullscreen().then(completeCallback);
+    }
+    
+    
+    /**
+     * Specify which of the currently open tabs is active for the user.
+     *
+     * @param tabIndex The numeric index for the tab that we want to set as active. 0 is the first, the one most to the left
+     * @param completeCallback A method that will be executed once the process finishes correctly
+     */
+    setBrowserActiveTab(tabIndex:number, completeCallback: () => void){
+    
+        this.driver.getAllWindowHandles().then((windowHandles: any) => {
+            
+            this.driver.switchTo().window(windowHandles[tabIndex]).then(completeCallback);
+        }); 
+    }
+    
+    
+    /**
      * Remove all the currently visible entries from the browser console 
      * 
      * @param completeCallback A method that will be executed once the browser console is cleared
@@ -209,96 +261,6 @@ export class AutomatedBrowserManager {
             
             throw new Error('Error waiting for browser ready: ' + e.toString());
         });
-    }
-    
-    
-    /**
-     * Wait till the provided list of elements is found on the current document or fail after the timeout has passed  
-     * 
-     * @param elements A list with the name for the html elements that we are looking for
-     * @param completeCallback A method that will be called once the specified elements are found
-     */
-    waitTillElementsExist(elements:string[], completeCallback: () => void){
-        
-        let recursiveCaller = (elements: any[], completeCallback: () => void) => {
-            
-            if(elements.length <= 0){
-                
-                return completeCallback();
-            }
-            
-            let element = elements.shift();
-            
-            this.driver.wait(this.webdriver.until.elementLocated(this.webdriver.By.xpath("//" + element)), this.waitTimeout)
-                .then(() => {
-                    
-                    recursiveCaller(elements, completeCallback);
-                    
-                }).catch((e:Error) => {
-                
-                throw new Error('Error trying to find element: ' + element + '\n' + e.toString());
-            });
-        }
-        
-        recursiveCaller(elements, completeCallback);
-    }
-    
-    
-    /**
-     * Wait till the elements for the provided list of ids are found on the current document or fail after the timeout has passed  
-     * 
-     * @param ids A list with the ids for the html elements that we are looking for
-     * @param completeCallback A method that will be called once the specified elements are found
-     */
-    waitTillIdsExist(ids:string|string[], completeCallback: () => void){
-        
-        let recursiveCaller = (ids: string[], completeCallback: () => void) => {
-            
-            if(ids.length <= 0){
-                
-                return completeCallback();
-            }
-            
-            let id = ids.shift();
-            
-            this.driver.wait(this.webdriver.until.elementLocated(this.webdriver.By.xpath("//*[@id='" + id + "']")), this.waitTimeout)
-                .then(() => {
-                    
-                    recursiveCaller(ids, completeCallback);
-                    
-                }).catch((e:Error) => {
-                
-                throw new Error('Error trying to find id: ' + id + '\n' + e.toString());
-            });
-        }
-        
-        let idsToSearch = ArrayUtils.isArray(ids) ? ids as string[] : [ids as string];
-        
-        recursiveCaller(idsToSearch, completeCallback);
-    }
-    
-    
-    /**
-     * Wait till the element which is found with the provided xpath expression is found, visible and enabled (ready to be clicked), or fail after the timeout has passed  
-     * 
-     * @param xpath The xpath expression to search for the element that must be clickable
-     * @param completeCallback A method that will be called once the specified element passes the wait conditions. The element instance will be passed to this method.
-     */
-    waitTillXpathClickable(xpath:string, completeCallback: (element: any) => void){
-        
-        this.driver.wait(this.webdriver.until.elementLocated(this.webdriver.By.xpath(xpath)), this.waitTimeout)
-            .then((element: any) => {
-            
-            this.driver.wait(this.webdriver.until.elementIsVisible(element), this.waitTimeout)
-                .then((element: any) => {
-            
-                this.driver.wait(this.webdriver.until.elementIsEnabled(element), this.waitTimeout)
-                    .then((element: any) => {
-                
-                    completeCallback(element);
-                }); 
-            }); 
-        });    
     }
     
     
@@ -382,6 +344,7 @@ export class AutomatedBrowserManager {
      *        "loadedHtmlContains" A string or an array of strings with texts that must exist in the same order on the html code that is loaded (and maybe altered) by the browser<br>
      *        "loadedHtmlRegExp" A regular expression that will be evaluated against the html code that is loaded (and maybe altered) by the browser and must match.<br>
      *        "loadedHtmlNotContains" A string or an array of strings with texts tat must NOT exist on the html code that is loaded (and maybe altered) by the browser
+     *        "tabsCount" A number specifiyng how many tabs must currently exist on the browser
      *        
      * @param completeCallback A method that will be called once all the tests have been successfully executed on the current browser state
      * 
@@ -397,8 +360,9 @@ export class AutomatedBrowserManager {
         try {
             
             this.objectTestsManager.assertObjectProperties(asserts,
-                    ['url', 'titleContains', 'ignoreConsoleErrors', 'sourceHtmlContains', 'sourceHtmlRegExp', 'sourceHtmlStartsWith', 'sourceHtmlEndsWith',
-                     'sourceHtmlNotContains', 'loadedHtmlStartsWith', 'loadedHtmlEndsWith', 'loadedHtmlContains', 'loadedHtmlRegExp', 'loadedHtmlNotContains'], false);
+                    ['url', 'titleContains', 'ignoreConsoleErrors', 'sourceHtmlContains', 'sourceHtmlRegExp', 'sourceHtmlStartsWith',
+                    'sourceHtmlEndsWith', 'sourceHtmlNotContains', 'loadedHtmlStartsWith', 'loadedHtmlEndsWith', 'loadedHtmlContains',
+                    'loadedHtmlRegExp', 'loadedHtmlNotContains', 'tabsCount'], false);
                  
         } catch (e) {
         
@@ -572,76 +536,85 @@ export class AutomatedBrowserManager {
                                     asserts.hasOwnProperty('loadedHtmlContains') ? asserts.loadedHtmlContains : null,
                                     asserts.hasOwnProperty('loadedHtmlRegExp') ? asserts.loadedHtmlRegExp : null);
                             
-                            // In case none of the real source code assertions have been defined, we will finish here, to avoid performing an unnecessary
-                            // http request to obtain the real source code.
-                            if((!asserts.hasOwnProperty('sourceHtmlStartsWith') || asserts.sourceHtmlStartsWith === null) &&
-                               (!asserts.hasOwnProperty('sourceHtmlEndsWith') || asserts.sourceHtmlEndsWith === null) &&
-                               (!asserts.hasOwnProperty('sourceHtmlNotContains') || asserts.sourceHtmlNotContains === null) &&
-                               (!asserts.hasOwnProperty('sourceHtmlContains') || asserts.sourceHtmlContains === null),
-                               (!asserts.hasOwnProperty('sourceHtmlRegExp') || asserts.sourceHtmlRegExp === null)){
-                                
-                                finish();
-                                
-                                return;
-                            }
+                            this.driver.getAllWindowHandles().then((windowHandles: any) => {
                             
-                            // If the url to test belongs to a local file, we will directly get the source code from there.
-                            let urlLocalFileContents = '';
-                                
-                            try {
-
-                                const fs = require('fs');
-                                const url = require('url');
-                                urlLocalFileContents = fs.readFileSync(url.fileURLToPath(browserUrl), "utf8");
-
-                            } catch (e) {}
-
-                            if(urlLocalFileContents !== ''){
-
-                                validateHtml(urlLocalFileContents, browserUrl,
-                                        asserts.hasOwnProperty('sourceHtmlStartsWith') ? asserts.sourceHtmlStartsWith : null,
-                                        asserts.hasOwnProperty('sourceHtmlEndsWith') ? asserts.sourceHtmlEndsWith : null,
-                                        asserts.hasOwnProperty('sourceHtmlNotContains') ? asserts.sourceHtmlNotContains : null,
-                                        asserts.hasOwnProperty('sourceHtmlContains') ? asserts.sourceHtmlContains : null,
-                                        asserts.hasOwnProperty('sourceHtmlRegExp') ? asserts.sourceHtmlRegExp : null);
-                                
-                                finish();
-                                
-                                return;
-                            }
+                                // If tabsCount is specified, check that the browser tabs number matches it   
+                                if(asserts.hasOwnProperty('tabsCount') && asserts.tabsCount !== windowHandles.length){
+                                    
+                                    anyErrors.push('Browser tabs count (' + windowHandles.length + ') must be: ' + asserts.tabsCount);
+                                }
                             
-                            // Perform an http request to get the url real code. This code may be different from the one that is found at the browser level,
-                            // cause the browser or any javascript dynamic process may alter it.
-                            try{
+                                // In case none of the real source code assertions have been defined, we will finish here, to avoid performing an unnecessary
+                                // http request to obtain the real source code.
+                                if((!asserts.hasOwnProperty('sourceHtmlStartsWith') || asserts.sourceHtmlStartsWith === null) &&
+                                   (!asserts.hasOwnProperty('sourceHtmlEndsWith') || asserts.sourceHtmlEndsWith === null) &&
+                                   (!asserts.hasOwnProperty('sourceHtmlNotContains') || asserts.sourceHtmlNotContains === null) &&
+                                   (!asserts.hasOwnProperty('sourceHtmlContains') || asserts.sourceHtmlContains === null),
+                                   (!asserts.hasOwnProperty('sourceHtmlRegExp') || asserts.sourceHtmlRegExp === null)){
+                                    
+                                    finish();
+                                    
+                                    return;
+                                }
                                 
-                                let request = new HTTPManagerGetRequest(browserUrl);
+                                // If the url to test belongs to a local file, we will directly get the source code from there.
+                                let urlLocalFileContents = '';
+                                    
+                                try {
+    
+                                    const fs = require('fs');
+                                    const url = require('url');
+                                    urlLocalFileContents = fs.readFileSync(url.fileURLToPath(browserUrl), "utf8");
+    
+                                } catch (e) {}
+    
+                                if(urlLocalFileContents !== ''){
+    
+                                    validateHtml(urlLocalFileContents, browserUrl,
+                                            asserts.hasOwnProperty('sourceHtmlStartsWith') ? asserts.sourceHtmlStartsWith : null,
+                                            asserts.hasOwnProperty('sourceHtmlEndsWith') ? asserts.sourceHtmlEndsWith : null,
+                                            asserts.hasOwnProperty('sourceHtmlNotContains') ? asserts.sourceHtmlNotContains : null,
+                                            asserts.hasOwnProperty('sourceHtmlContains') ? asserts.sourceHtmlContains : null,
+                                            asserts.hasOwnProperty('sourceHtmlRegExp') ? asserts.sourceHtmlRegExp : null);
+                                    
+                                    finish();
+                                    
+                                    return;
+                                }
                                 
-                                request.errorCallback = (errorMsg: string, errorCode: number) => {
-                                
-                                    anyErrors.push('Could not load url: ' + browserUrl + '\nError code: ' + errorCode + '\n' + errorMsg);
-                                };
-                                
-                                request.successCallback = (html: any) => {
-                                   
-                                    validateHtml(html, browserUrl,
-                                        asserts.hasOwnProperty('sourceHtmlStartsWith') ? asserts.sourceHtmlStartsWith : null,
-                                        asserts.hasOwnProperty('sourceHtmlEndsWith') ? asserts.sourceHtmlEndsWith : null,
-                                        asserts.hasOwnProperty('sourceHtmlNotContains') ? asserts.sourceHtmlNotContains : null,
-                                        asserts.hasOwnProperty('sourceHtmlContains') ? asserts.sourceHtmlContains : null,
-                                        asserts.hasOwnProperty('sourceHtmlRegExp') ? asserts.sourceHtmlRegExp : null);
-                                 };
-
-                                // Once the request to get the real browser code is done, we will check if any error has happened
-                                request.finallyCallback = finish;
-                                
-                                this.httpManager.execute(request);    
-                                
-                            } catch (e) {
-
-                                anyErrors.push('Error performing http request to '+ browserUrl + '\n' + e.toString());
-                                
-                                finish();
-                            }
+                                // Perform an http request to get the url real code. This code may be different from the one that is found at the browser level,
+                                // cause the browser or any javascript dynamic process may alter it.
+                                try{
+                                    
+                                    let request = new HTTPManagerGetRequest(browserUrl);
+                                    
+                                    request.errorCallback = (errorMsg: string, errorCode: number) => {
+                                    
+                                        anyErrors.push('Could not load url: ' + browserUrl + '\nError code: ' + errorCode + '\n' + errorMsg);
+                                    };
+                                    
+                                    request.successCallback = (html: any) => {
+                                       
+                                        validateHtml(html, browserUrl,
+                                            asserts.hasOwnProperty('sourceHtmlStartsWith') ? asserts.sourceHtmlStartsWith : null,
+                                            asserts.hasOwnProperty('sourceHtmlEndsWith') ? asserts.sourceHtmlEndsWith : null,
+                                            asserts.hasOwnProperty('sourceHtmlNotContains') ? asserts.sourceHtmlNotContains : null,
+                                            asserts.hasOwnProperty('sourceHtmlContains') ? asserts.sourceHtmlContains : null,
+                                            asserts.hasOwnProperty('sourceHtmlRegExp') ? asserts.sourceHtmlRegExp : null);
+                                     };
+    
+                                    // Once the request to get the real browser code is done, we will check if any error has happened
+                                    request.finallyCallback = finish;
+                                    
+                                    this.httpManager.execute(request);    
+                                    
+                                } catch (e) {
+    
+                                    anyErrors.push('Error performing http request to '+ browserUrl + '\n' + e.toString());
+                                    
+                                    finish();
+                                }
+                            });
                         });
                     });
                 });
@@ -783,6 +756,183 @@ export class AutomatedBrowserManager {
     }
     
     
+    /**
+     * Wait till all the provided list of xpath expressions exist/not exist on the current document or fail after the timeout has passed  
+     * (globally defined by the waitTimeout property)
+     * 
+     * @param xpaths A list with the xpath expressions that we are looking for (Examples on assertClickableXpath method docs)
+     * @param exist True if we expect the elements to exist, false otherwise
+     * @param completeCallback A method that will be called once the elements are found and will receive all the located instances
+     */
+    assertExistXpath(xpaths:string|string[], exist: boolean, completeCallback: (elements: any[]) => void){
+        
+        let elemensFound: any[] = [];
+        
+        let recursiveCaller = (xpathsArray:string[], index: number, completeCallback: (e: any[]) => void) => {
+            
+            if(index >= xpathsArray.length){
+                
+                return completeCallback(elemensFound);
+            }
+            
+            if(!exist){
+                
+                this.driver.findElement(this.webdriver.By.xpath(xpathsArray[index]))
+                    .then(() => {
+                        
+                        exist = true;
+                        
+                        throw new Error('Expected xpath to NOT exist, but existed: ' + xpathsArray[index]);
+                        
+                    }).catch((e:Error) => {
+                        
+                        if(exist){
+                            
+                            throw new Error(e.toString());
+                        }
+                        
+                        recursiveCaller(xpathsArray, index + 1, completeCallback);
+                    });
+            
+            }else{
+                
+                this.driver.wait(this.webdriver.until.elementLocated(this.webdriver.By.xpath(xpathsArray[index])), this.waitTimeout)
+                    .then((element:any) => {
+                        
+                    elemensFound.push(element);
+                        
+                    recursiveCaller(xpathsArray, index + 1, completeCallback);
+                    
+                }).catch((e:Error) => {
+                    
+                    throw new Error('Error trying to find xpath: ' + xpathsArray[index] + '\n' + e.toString());
+                });
+            }
+        }
+        
+        recursiveCaller(ArrayUtils.isArray(xpaths) ? xpaths as string[] : [xpaths as string], 0, completeCallback);  
+    }
+    
+    
+    /**
+     * Wait till all the elements for the provided list of ids exist/not exist on the current document or fail after the timeout has passed  
+     * (globally defined by the waitTimeout property)
+     * 
+     * @param ids A list with the ids for the html elements that we are looking for
+     * @param exist True if we expect the elements to exist, false otherwise
+     * @param completeCallback A method that will be called once the elements are found and will receive all the located instances
+     */
+    assertExistId(ids:string|string[], exist: boolean, completeCallback: (elements: any[]) => void){
+        
+        ids = ArrayUtils.isArray(ids) ? ids as string[] : [ids as string];
+        
+        this.assertExistXpath(ids.map(x => "//*[@id='" + x + "']"), exist, completeCallback);
+    }
+        
+    
+    /**
+     * Wait till the provided list of elements exist/not exist on the current document or fail after the timeout has passed
+     * (globally defined by the waitTimeout property) 
+     * 
+     * @param elements A list with the name for the html elements that we are looking for
+     * @param exist True if we expect the elements to exist, false otherwise
+     * @param completeCallback A method that will be called once the elements are found and will receive all the located instances
+     */
+    assertExistElement(elements:string|string[], exist: boolean, completeCallback: (elements: any[]) => void){
+        
+        let elementsArray = ArrayUtils.isArray(elements) ? elements as string[] : [elements as string];
+        
+        this.assertExistXpath(elementsArray.map(x => "//" + x), exist, completeCallback);
+    }
+    
+    
+    /**
+     * Wait till all the provided list of xpath expressions are visible or invisible on the current document or fail after the timeout has passed  
+     * (globally defined by the waitTimeout property)
+     * 
+     * @param xpaths A list with the xpath expressions that we are looking for (Examples on assertClickableXpath method docs)
+     * @param visible True if we expect the elements to be visible, false otherwise
+     * @param completeCallback A method that will be called once the elements are found and will receive all the located instances
+     */
+    assertVisibleXpath(xpaths:string|string[], visible: boolean, completeCallback: (elements: any[]) => void){
+        
+        let xpathsArray = ArrayUtils.isArray(xpaths) ? xpaths as string[] : [xpaths as string];
+        
+        this.assertExistXpath(xpathsArray, true, (elementsFound) => {
+            
+            let recursiveCaller = (index: number, completeCallback: (e: any[]) => void) => {
+                
+                if(index >= xpathsArray.length){
+                    
+                    return completeCallback(elementsFound);
+                }
+                
+                this.driver.wait(visible ?
+                    this.webdriver.until.elementIsVisible(elementsFound[index]):
+                    this.webdriver.until.elementIsNotVisible(elementsFound[index]), this.waitTimeout)
+                    .then(() => {
+                        
+                    recursiveCaller(index + 1, completeCallback);
+                    
+                }).catch((e:Error) => {
+                        
+                    throw new Error('Expected ' + xpathsArray[index] + ' ' +
+                        (visible ? 'to be visible ' : 'to be NON visible') + '\n' + e.toString());
+                });
+            }
+            
+            recursiveCaller(0, completeCallback); 
+        });
+    }
+    
+    
+    /**
+     * Wait till the element which are defined by the provided xpath expression are found, visible and enabled (ready to be clicked), or fail after 
+     * the timeout has passed (globally defined by the waitTimeout property)
+     * 
+     * @param xpath The xpath expression to search for the element that must be clickable. Examples:
+     *        - To search by id: "//*[@id='someId']"
+     *        - To search by the href value of all a elements: "//a[contains(@href, 'someurl')]"
+     *        - To search by the href value of all a elements that are inside a section element: "//section/a[contains(@href, 'someurl')]"
+     * @param clickable True if we expect the elements to be clickable, false otherwise
+     * @param completeCallback A method that will be called once the elements are found and will receive all the located instances
+     */
+    assertClickableXpath(xpaths:string|string[], clickable: boolean, completeCallback: (elements: any[]) => void){
+        
+        let xpathsArray = ArrayUtils.isArray(xpaths) ? xpaths as string[] : [xpaths as string];
+        
+        this.assertVisibleXpath(xpathsArray, true, (elementsFound) => {
+            
+            let recursiveCaller = (index: number, completeCallback: (e: any[]) => void) => {
+                
+                if(index < xpathsArray.length){
+                    
+                    let errorCatcher = (e:Error) => {
+                        
+                        throw new Error('Expected ' + xpathsArray[index] + ' ' +
+                            (clickable ? 'to be clickable ' : 'to be NON clickable') + '\n' + e.toString());
+                    }
+                
+                    this.driver.wait(clickable ?
+                        this.webdriver.until.elementIsEnabled(elementsFound[index]) :
+                        this.webdriver.until.elementIsDisabled(elementsFound[index]),
+                        this.waitTimeout).then(() => {
+                    
+                        recursiveCaller(index + 1, completeCallback);
+                    
+                    }).catch(errorCatcher);
+                   
+                }else{
+                    
+                     return completeCallback(elementsFound);
+                }
+            }
+            
+            recursiveCaller(0, completeCallback);
+        })
+    }
+    
+    
     /** TODO */
     assertSnapshot(){
         
@@ -813,14 +963,13 @@ export class AutomatedBrowserManager {
     
     
     /**
-     * Click on one or more document elements (sequentially) by id.
+     * Click on one or more document elements (sequentially) by id, waiting 1.5 seconds between each call
      * 
      * @param id A single string with the id for the element which we want to click or a list of ids that will be sequentially clicked
      *        one after the other. Any failure trying to click any of the provided ids will throw an exception
      * @param completeCallback A method that will be called once the specified element or all the specified elements are found and a click is performed
-     * @param waitMilliseconds The number of milliseconds that we will wait between each click call, even if the ids are inmediately available
      */
-    clickById(id:string|string[], completeCallback: () => void, waitMilliseconds = 1000){
+    clickById(id:string|string[], completeCallback: () => void){
         
         let ids = ArrayUtils.isArray(id) ? id as string[] : [id as string];
         
@@ -829,39 +978,38 @@ export class AutomatedBrowserManager {
             ids[i] = "//*[@id='" + ids[i] + "']";
         }
         
-        this.clickByXpath(ids, completeCallback, waitMilliseconds);
+        this.clickByXpath(ids, completeCallback);
     }
     
     
     /**
-     * Click on one or more document elements (sequentially) by xpath.
+     * Click on one or more document elements (sequentially) by xpath, waiting 1.5 seconds between each call
      * 
      * @param xpath A single string with the xpath query that lets us find the element which we want to click or a list of xpaths
      *        that will be sequentially clicked one after the other. Any failure trying to click any of the provided xpaths will throw an exception
      * @param completeCallback A method that will be called once the specified element or all the specified elements are found and a click is performed
-     * @param waitMilliseconds The number of milliseconds that we will wait between each click call, even if the xpath elements are inmediately available
      */
-    clickByXpath(xpath:string|string[], completeCallback: () => void, waitMilliseconds = 1000){
+    clickByXpath(xpaths:string|string[], completeCallback: () => void){
     
-        let xpaths = ArrayUtils.isArray(xpath) ? xpath as string[] : [xpath as string];
+        let xpathsArray = ArrayUtils.isArray(xpaths) ? xpaths as string[] : [xpaths as string];
     
-        let recursiveCaller = (xpaths: string[], completeCallback: () => void) => {
+        let recursiveCaller = (index: number, completeCallback: () => void) => {
             
-            if(xpaths.length <= 0){
+            if(index >= xpathsArray.length){
                 
                 return completeCallback();
             }
             
-            this._clickByXpathAux(xpaths.shift() as string, 5, () => {
+            this._clickByXpathAux(xpathsArray[index], 5, () => {
                 
-                this.waitMilliseconds(xpaths.length <= 0 ? 0 : waitMilliseconds, () => {
+                this.waitMilliseconds(xpathsArray.length <= 0 ? 0 : 1500, () => {
                     
-                    recursiveCaller(xpaths, completeCallback);
+                    recursiveCaller(index + 1, completeCallback);
                 });
             });      
         }
         
-        recursiveCaller(xpaths, completeCallback);   
+        recursiveCaller(0, completeCallback);   
     }
     
     
@@ -874,9 +1022,9 @@ export class AutomatedBrowserManager {
      */
     private _clickByXpathAux(xpath:string, attempts: number, completeCallback: () => void){
     
-        this.waitTillXpathClickable(xpath, (element: any) => {
+        this.assertClickableXpath(xpath, true, (elements) => {
                 
-            element.click().then(() => {
+            elements[0].click().then(() => {
                 
                 completeCallback();
             

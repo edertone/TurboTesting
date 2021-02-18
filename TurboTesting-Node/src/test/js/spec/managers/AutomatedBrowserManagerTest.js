@@ -37,6 +37,34 @@ describe('AutomatedBrowserManagerTest', function() {
     });
     
     
+    it('should correctly execute the setBrowserSizeAndPosition method', function(done) {
+    
+        // TODO
+        done();
+    });
+    
+    
+    it('should correctly execute the setBrowserAsMaximized method', function(done) {
+    
+        // TODO
+        done();
+    });
+    
+    
+    it('should correctly execute the setBrowserAsFullScreen method', function(done) {
+    
+        // TODO
+        done();
+    });
+    
+    
+    it('should correctly execute the setBrowserActiveTab method', function(done) {
+    
+        // TODO
+        done();
+    });
+    
+    
     it('should correctly execute the clearConsole method', function(done) {
     
         // TODO
@@ -51,22 +79,8 @@ describe('AutomatedBrowserManagerTest', function() {
     });
     
     
-    it('should correctly execute the waitTillElementsExist method', function(done) {
-        
-        // TODO
-        done();
-    });
+    it('should correctly execute the waitMilliseconds method', function(done) {
     
-    
-    it('should correctly execute the waitTillIdsExist method', function(done) {
-        
-        // TODO
-        done();
-    });
-    
-    
-    it('should correctly execute the waitTillXpathClickable method', function(done) {
-        
         // TODO
         done();
     });
@@ -187,6 +201,18 @@ describe('AutomatedBrowserManagerTest', function() {
     });
     
     
+    it('should correctly execute the assertBrowserState method when checking for the number of open tabs on the browser', function(done) {
+        
+        this.automatedBrowserManager.wildcards = {$projectRoot: projectRoot};
+        
+        this.automatedBrowserManager.loadUrl(
+            '$projectRoot/src/test/resources/managers/automatedBrowserManager/basic-html/basic.html', () => {
+        
+            this.automatedBrowserManager.assertBrowserState({ tabsCount: 1 }, done); 
+        });
+    });
+    
+    
     it('should correctly ignore all the console errors on the assertBrowserState method when enabling ALL ignoreConsoleErrors', function(done) {
         
         this.automatedBrowserManager.loadUrl(
@@ -298,6 +324,142 @@ describe('AutomatedBrowserManagerTest', function() {
     });
     
     
+    it('should correctly execute the assertUrlsFail method', function(done) {
+        
+        // TODO
+        done();
+    });
+    
+    
+    it('should correctly execute the assertExistXpath method', function(done) {
+        
+        this.automatedBrowserManager.loadUrl(
+            projectRoot + '/src/test/resources/managers/automatedBrowserManager/basic-html/basic-with-input.html', () => {
+                
+            this.automatedBrowserManager.assertExistXpath("//*[@id='someInput']", true, (elements) => {
+                
+                expect(elements.length).toBe(1);
+                    
+                this.automatedBrowserManager.assertExistXpath("//*[@id='nonexistantId']", false, (elements2) => {
+                    
+                    expect(elements2.length).toBe(0);
+                    done();
+                });
+            });
+        });
+    });
+    
+    
+    it('should correctly execute the assertExistId method', function(done) {
+        
+        this.automatedBrowserManager.loadUrl(
+            projectRoot + '/src/test/resources/managers/automatedBrowserManager/basic-html/basic-with-input.html', () => {
+                
+            this.automatedBrowserManager.assertExistId("someInput", true, (elements) => {
+                
+                expect(elements.length).toBe(1);
+                    
+                this.automatedBrowserManager.assertExistId("nonexistantId", false, (elements2) => {
+                    
+                    expect(elements2.length).toBe(0);
+                    done();
+                });
+            });
+        });
+    });
+    
+    
+    it('should correctly execute the assertExistElement method', function(done) {
+        
+        this.automatedBrowserManager.loadUrl(
+            projectRoot + '/src/test/resources/managers/automatedBrowserManager/basic-html/basic-with-input.html', () => {
+            
+            this.automatedBrowserManager.assertExistElement("input", true, (elements) => {
+                
+                expect(elements.length).toBe(1);
+                        
+                this.automatedBrowserManager.assertExistElement(["input", "h1", "section"], true, (elements2) => {
+                    
+                    expect(elements2.length).toBe(3);
+                        
+                    this.automatedBrowserManager.assertExistElement("nonexistantElement1", false, (elements3) => {
+                        
+                        expect(elements3.length).toBe(0);
+                        
+                        this.automatedBrowserManager.assertExistElement(["nonexistantElement1", "nonexistantElement2"], false, (elements4) => {
+                            
+                            expect(elements4.length).toBe(0);
+                            done();
+                        });
+                    });
+                });
+            });
+        });
+    });
+    
+    
+    it('should correctly execute the assertVisibleXpath method', function(done) {
+        
+        this.automatedBrowserManager.loadUrl(
+            projectRoot + '/src/test/resources/managers/automatedBrowserManager/basic-html/basic-with-input-invisible.html', () => {
+            
+            this.automatedBrowserManager.assertVisibleXpath("//*[@id='someInput']", true, (elements) => {
+                
+                expect(elements.length).toBe(1);
+                        
+                this.automatedBrowserManager.assertVisibleXpath(["//*[@id='someInput']", "/html/body/main/section/h1"], true, (elements2) => {
+                    
+                    expect(elements2.length).toBe(2);
+                        
+                    this.automatedBrowserManager.assertVisibleXpath("//*[@id='invisibleInput']", false, (elements3) => {
+                        
+                        expect(elements3.length).toBe(1);
+                        done();
+                    });
+                });
+            });
+        });
+    });
+    
+    
+    it('should correctly execute the assertClickableXpath method', function(done) {
+        
+        this.automatedBrowserManager.loadUrl(
+            projectRoot + '/src/test/resources/managers/automatedBrowserManager/basic-html/basic-with-input-disabled.html', () => {
+            
+            this.automatedBrowserManager.assertClickableXpath("//*[@id='someInput']", true, (elements) => {
+                
+                expect(elements.length).toBe(1);
+                        
+                this.automatedBrowserManager.assertClickableXpath(["//*[@id='someInput']", "/html/body/main/section/h1"], true, (elements2) => {
+                    
+                    expect(elements2.length).toBe(2);
+                        
+                    this.automatedBrowserManager.assertClickableXpath("//*[@id='disabledInput']", false, (elements3) => {
+                        
+                        expect(elements3.length).toBe(1);
+                        done();
+                    });
+                });
+            });
+        });
+    });
+    
+    
+    it('should correctly execute the assertSnapshot method', function(done) {
+        
+        // TODO
+        done();
+    });
+    
+    
+    it('should correctly execute the assertWholeWebSite method', function(done) {
+        
+        // TODO
+        done();
+    });
+    
+    
     it('should correctly execute the clickById method', function(done) {
         
         // TODO        
@@ -306,6 +468,20 @@ describe('AutomatedBrowserManagerTest', function() {
     
     
     it('should correctly execute the clickByXpath method', function(done) {
+        
+        // TODO        
+        done();
+    });
+    
+    
+    it('should correctly execute the clearInputById method', function(done) {
+        
+        // TODO        
+        done();
+    });
+    
+    
+    it('should correctly execute the clearInputByXpath method', function(done) {
         
         // TODO        
         done();
@@ -332,6 +508,34 @@ describe('AutomatedBrowserManagerTest', function() {
     it('should correctly execute the sendKeysByXpath method', function(done) {
         
         // TODO
+        done();
+    });
+    
+    
+    it('should correctly execute the getAttributeById method', function(done) {
+        
+        // TODO        
+        done();
+    });
+    
+    
+    it('should correctly execute the getAttributeByXpath method', function(done) {
+        
+        // TODO        
+        done();
+    });
+    
+    
+    it('should correctly execute the queryCalls method', function(done) {
+        
+        // TODO        
+        done();
+    });
+    
+    
+    it('should correctly execute the quit method', function(done) {
+        
+        // TODO        
         done();
     });
 });
