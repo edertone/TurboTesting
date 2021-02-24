@@ -1,6 +1,6 @@
 {
   "name": "turbotesting-node",
-  "version": "7.8.0",
+  "version": "8.0.0",
   "description": "General purpose cross-language library to improve automated testing productivity",
   "main": "index.js",
   "types": "index.d.ts",
@@ -13,11 +13,14 @@
     "url": "https://github.com/edertone/TurboTesting"
   },
   "dependencies": {
+    "canvas": "^2.6.1",
+    "pixelmatch": "^5.2.1",
+    "pngjs": "^6.0.0",
     "turbocommons-ts": "^3.7.0",
-    "xhr2": "^0.2.0"
+    "xhr2": "^0.2.1"
   },
   "devDependencies": {
-    "jasmine": "^3.6.3",
+    "jasmine": "^3.6.4",
     "selenium-webdriver": "^4.0.0-alpha.4",
     "turbodepot-node": "^7.0.1"
   },

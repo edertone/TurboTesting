@@ -8,11 +8,13 @@
  */
  
 
-import { ArrayUtils, HTTPManager, HTTPManagerGetRequest } from 'turbocommons-ts';
+import { ArrayUtils, StringUtils, HTTPManager, HTTPManagerGetRequest } from 'turbocommons-ts';
 import { HTTPTestsManager } from './HTTPTestsManager';
 import { StringTestsManager } from './StringTestsManager';
 import { ObjectTestsManager } from './ObjectTestsManager';
+import { FilesManager } from 'turbodepot-node';
 
+declare const Buffer: any;
 declare function require(name: string): any;
 
 
@@ -85,9 +87,44 @@ export class AutomatedBrowserManager {
     
     
     /**
+     * A files manager instance used by this class
+     */
+    private filesManager: FilesManager = new FilesManager();
+    
+    
+    /**
+     * Stores the NodeJs fs instance
+     */
+    private nodeFs: any;
+    
+    
+    /**
+     * Stores the NodeJs url instance
+     */
+    private nodeUrl: any;
+    
+    /**
      * Stores the NodeJs execSync instance
      */
-    private execSync: any;
+    private nodeExecSync: any;
+    
+    
+    /**
+     * Stores the NodeJs pngjs chrome instance
+     */
+    private nodePNG: any = null;
+    
+    
+    /**
+     * Stores the NodeJs pixelmatch chrome instance
+     */
+    private nodePixelmatch: any = null;
+    
+    
+    /**
+     * Stores the NodeJs node-canvas chrome instance
+     */
+    private nodeCanvas: any = null;
     
     
     /**
@@ -109,7 +146,9 @@ export class AutomatedBrowserManager {
      */
     constructor() {
         
-        this.execSync = require('child_process').execSync;
+        this.nodeFs = require('fs');
+        this.nodeUrl = require('url');
+        this.nodeExecSync = require('child_process').execSync;
         this.webdriver = require('selenium-webdriver');
         this.chrome = require('selenium-webdriver/chrome');
     }
@@ -131,7 +170,7 @@ export class AutomatedBrowserManager {
         // Check that chrome driver is available on our system
         try{
             
-            this.execSync('chromedriver -v', {stdio : 'pipe'}).toString();
+            this.nodeExecSync('chromedriver -v', {stdio : 'pipe'}).toString();
                     
         }catch(e){
             
@@ -180,17 +219,21 @@ export class AutomatedBrowserManager {
     
     
     /**
-     * Specify the size and position for the main browser window. This method can be called at any time
+     * Specify the viewport size and the main browser window position. This method can be called at any time
      *
-     * @param width The desired browser width
-     * @param height The desired browser height
+     * @param width The desired browser viewport width. (Note this is the internal area where the website is displayed)
+     * @param height The desired browser viewport height. (Note this is the internal area where the website is displayed)
      * @param x The desired browser left corner position
      * @param y The desired browser top corner position
      * @param completeCallback A method that will be executed once the process finishes correctly
      */
-    setBrowserSizeAndPosition(width: number, height: number, x = 0, y = 0,  completeCallback: () => void){
-      
-        this.driver.manage().window().setRect({height: height, width: width, x: x, y: y}).then(completeCallback);
+    setBrowserSizeAndPosition(width: number, height: number, x = 0, y = 0, completeCallback: () => void){
+    
+        this.driver.executeScript(`return [window.outerWidth - window.innerWidth + ${width}, window.outerHeight - window.innerHeight + ${height}];`)
+            .then((viewportSize: any) =>{
+        
+            this.driver.manage().window().setRect({width: viewportSize[0], height: viewportSize[1], x: x, y: y}).then(completeCallback);
+        });
     }
     
     
@@ -562,9 +605,7 @@ export class AutomatedBrowserManager {
                                     
                                 try {
     
-                                    const fs = require('fs');
-                                    const url = require('url');
-                                    urlLocalFileContents = fs.readFileSync(url.fileURLToPath(browserUrl), "utf8");
+                                    urlLocalFileContents = this.nodeFs.readFileSync(this.nodeUrl.fileURLToPath(browserUrl), "utf8");
     
                                 } catch (e) {}
     
@@ -933,13 +974,130 @@ export class AutomatedBrowserManager {
     }
     
     
-    /** TODO */
-    assertSnapshot(){
+    /**
+     * Test that the current document visible area matches a previously stored snapshot. First time the snapshot will be stored if not exist, and then always compared with
+     * the contents of the browser viewport. Specific regions of the snapshot can be ignored if necessary, and comparison sensitivity can be also specified.
+     * 
+     * @param snapShotPath Full file system path to the snapshot that must be used to compare with the browser. First time will be created if not exists
+     * @param options Parameters to modify the assert behaviour:
+     *        - maxDifferentPixels: (default 0) Allowed number of pixels that are allowed to be different between the saved snapshot and the browser viewport contents
+     *        - tolerance: (default 0.1) A value between 0 and 1 which defines the threshold to define that a pixel is different or not. 0 means stricter image comparison
+     *        - ignoreRegions: An array of objects with x,y, width and height properties where each object defines a rectangular area that will be ignored from the comparison
+     * @param completeCallback A method that will be called once the assert finishes correctly
+     */
+    assertSnapshot(snapShotPath: string,
+                   options: { maxDifferentPixels: number,
+                              tolerance: number,
+                              ignoreRegions: {x: number, y: number, width: number, height: number}[]
+                            },
+                   completeCallback: () => void){
         
-        // It should receive coordinates and dimensions from an area of the browser screen
-        // If the captured area already exists at the filesystem specified location and matches exactly with the provided percent with the actual browser area, test will pass.
-        // If not, test will fail. If the snapshot does not exist on filesystem, it will be created from the actual browser area and test will pass.
-        // Next time the assert is executed, the snapshot will be used to compare with the browser area again
+        // Init required instances if necessary
+        if(this.nodePNG === null){
+            
+            this.nodePNG = require('pngjs').PNG;
+        }
+        
+        if(this.nodePixelmatch === null){
+            
+            this.nodePixelmatch = require('pixelmatch');
+        }
+        
+        if(this.nodeCanvas === null){
+            
+            this.nodeCanvas = require('canvas');
+        }
+        
+        // Initialize default options if necessary
+        options.maxDifferentPixels = options.hasOwnProperty('maxDifferentPixels') ? options.maxDifferentPixels : 0;
+        options.tolerance = options.hasOwnProperty('tolerance') ? options.tolerance : 0.1;
+        options.ignoreRegions = options.hasOwnProperty('ignoreRegions') ? options.ignoreRegions : [];
+        
+        // Test that specified path is a png file and tha parent folder exists
+        if(StringUtils.getPathExtension(snapShotPath).toLowerCase() !== 'png'){
+            
+            throw new Error('Snapshot path must be to a PNG file: ' + snapShotPath);
+        }
+
+        if(!this.filesManager.isDirectory(StringUtils.getPath(snapShotPath))){
+            
+            throw new Error('Cannot save snapshot to non existant path: ' + snapShotPath);
+        }
+        
+        this.waitTillBrowserReady(() => {
+ 
+            // Get the screen shot for the browser window visible contents with selenium
+            this.driver.takeScreenshot().then((data:any) => {
+    
+                let newSnapshot = this.nodePNG.sync.read(Buffer.from(data.replace(/^data:image\/png;base64,/, ''), 'base64'));
+    
+                // If the specified snapshot path does not exist, we will simply save the captured image and finish
+                if(!this.filesManager.isFile(snapShotPath)){
+                
+                    this.filesManager.saveFile(snapShotPath, this.nodePNG.sync.write(newSnapshot));
+                        
+                    return completeCallback();
+                }
+            
+                // Load the previously stored snapshot to compare it with the new one
+                let oldSnapshot = this.nodePNG.sync.read(this.nodeFs.readFileSync(snapShotPath));
+                let diffSnapshot = new this.nodePNG({width: oldSnapshot.width, height: oldSnapshot.height});
+                
+                // Both snapshots must be the same size
+                if(oldSnapshot.width !== newSnapshot.width || oldSnapshot.height !== newSnapshot.height){
+                    
+                    throw new Error(`Snapshot size mismatch: Expected ${oldSnapshot.width}x${oldSnapshot.height}px, but received ${newSnapshot.width}x${newSnapshot.height}px\n${snapShotPath}`);
+                }
+                
+                // Paint in black on both snapshots the specified ignore regions so they do not count for the comparison
+                if(options.ignoreRegions.length > 0){
+                    
+                    // Aux function to paint a black rectangle on a PNG image instance
+                    let paintRegion = (pngImage:any, x:number, y:number, width:number, height:number) => {
+                        
+                        if((x + width) > oldSnapshot.width || (y + height) > oldSnapshot.height){
+                            
+                            throw new Error('Specified an ignore region that is bigger than the snapshot\n' + snapShotPath);
+                        }
+                        
+                        let canvas = this.nodeCanvas.createCanvas(oldSnapshot.width, oldSnapshot.height);
+                        let ctx = canvas.getContext('2d');
+                        let img = new this.nodeCanvas.Image();
+                        img.src = this.nodePNG.sync.write(pngImage);
+                        
+                        ctx.fillStyle = "black";
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                        ctx.fillRect(x, y, width, height);
+                        
+                        return this.nodePNG.sync.read(Buffer.from(canvas.toDataURL("image/png").replace(/^data:image\/png;base64,/, ''), 'base64'));
+                    };
+                    
+                    for(let ignoreRegion of options.ignoreRegions){
+                    
+                        oldSnapshot = paintRegion(oldSnapshot, ignoreRegion.x, ignoreRegion.y, ignoreRegion.width, ignoreRegion.height);
+                        newSnapshot = paintRegion(newSnapshot, ignoreRegion.x, ignoreRegion.y, ignoreRegion.width, ignoreRegion.height);
+                    }
+                }
+                
+                // Compare the old snapshot with the new one, and fail if different pixels exceed the expected         
+                let differentPixels = this.nodePixelmatch(oldSnapshot.data, newSnapshot.data, diffSnapshot.data,
+                    oldSnapshot.width, oldSnapshot.height, {threshold: options.tolerance});
+                
+                // Test diferent pixels are as expected
+                if(options.maxDifferentPixels < differentPixels){
+                    
+                    // Save the new snapshot and the diff image at the same place where the old one is found
+                    let failSnapshotPath = StringUtils.getPath(snapShotPath) + '/' + StringUtils.getPathElementWithoutExt(snapShotPath);
+                    this.filesManager.saveFile(failSnapshotPath + '-failedSnapshot.png', this.nodePNG.sync.write(newSnapshot));
+                    this.filesManager.saveFile(failSnapshotPath + '-failedSnapshotDiff.png', this.nodePNG.sync.write(diffSnapshot));
+
+                    throw new Error(`Snapshot mismatch: Allowed ${options.maxDifferentPixels} different pixels, but found ${differentPixels}\n${snapShotPath}\nSaved new snapshot with ignored regions painted in black and diff file to:\n${StringUtils.getPath(snapShotPath)}\n`);
+                }
+                     
+                completeCallback();
+            });
+        });
     }
     
     
@@ -1190,6 +1348,24 @@ export class AutomatedBrowserManager {
         }
         
         recursiveCaller(queries, completeCallback); 
+    }
+    
+    
+    /**
+     * Close the specified browser tab
+     *
+     * @param tabIndex The numeric index for the tab that we want to close. 0 is the first, the one most to the left
+     * @param completeCallback A method that will be executed once the process finishes correctly
+     */
+    closeBrowserTab(tabIndex:number, completeCallback: () => void){
+    
+        this.driver.getAllWindowHandles().then((windowHandles: any) => {
+            
+            this.driver.switchTo().window(windowHandles[tabIndex]).then(() => {
+                
+                 this.driver.close().then(completeCallback);
+            });
+        }); 
     }
     
     

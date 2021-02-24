@@ -446,10 +446,23 @@ describe('AutomatedBrowserManagerTest', function() {
     });
     
     
-    it('should correctly execute the assertSnapshot method', function(done) {
-        
-        // TODO
-        done();
+    it('should throw exception when passing an invalid snapshot path to the assertSnapshot method', function() {
+    
+        expect(() => {this.automatedBrowserManager.assertSnapshot(projectRoot + 'asdfasdfas', [], 100, () => {})})
+            .toThrowError(Error, /Snapshot path must be to a PNG file.*asdfasdfas/);
+            
+        expect(() => {this.automatedBrowserManager.assertSnapshot(projectRoot + 'asdfasdfas/dfasdfasdfasdfa.png', [], 100, () => {})})
+            .toThrowError(Error, /Cannot save snapshot to non existant path.*dfasdfasdfasdfa/);
+    });
+    
+    
+    it('should correctly execute the assertSnapshot method with a snapshot that already exists', function(done) {
+    
+        this.automatedBrowserManager.queryCalls([
+            ['setBrowserSizeAndPosition', 800, 600, 0, 0],
+            ['loadUrl', projectRoot + '/src/test/resources/managers/automatedBrowserManager/basic-html/basic-with-input-disabled.html'],
+            ['assertSnapshot', projectRoot + '/src/test/resources/managers/automatedBrowserManager/snapshots/basic-with-input-disabled-snapshot-800x600.png', {}]
+        ], done);
     });
     
     
@@ -527,6 +540,13 @@ describe('AutomatedBrowserManagerTest', function() {
     
     
     it('should correctly execute the queryCalls method', function(done) {
+        
+        // TODO        
+        done();
+    });
+    
+    
+    it('should correctly execute the closeBrowserTab method', function(done) {
         
         // TODO        
         done();
