@@ -112,9 +112,9 @@ export class HTTPTestsManager {
         let anyErrors: string[] = [];
         
         // Perform a recursive execution for all the provided urls
-        let recursiveCaller = (urls: any[], completeCallback: (assertErrors?: string[]) => void) => {
+        let recursiveCaller = (index:number, completeCallback: (assertErrors?: string[]) => void) => {
 
-            if(urls.length <= 0){
+            if(index >= urls.length){
                 
                 if(this.isAssertExceptionsEnabled && anyErrors.length > 0){
                     
@@ -124,22 +124,20 @@ export class HTTPTestsManager {
                 return completeCallback(anyErrors);
             }
             
-            let entry = urls.shift();
-            
-            let request = this.createRequestFromEntry(entry, anyErrors);
+            let request = this.createRequestFromEntry(urls[index], anyErrors);
             
             request.errorCallback = (errorMsg: string, errorCode: number, response: string) => {
             
-                this.assertRequestContents(response, entry, anyErrors, String(errorCode), errorMsg);
+                this.assertRequestContents(response, urls[index], anyErrors, String(errorCode), errorMsg);
                 
-                recursiveCaller(urls, completeCallback);
+                recursiveCaller(index + 1, completeCallback);
             };
             
             request.successCallback = () => {
             
                 anyErrors.push(`URL expected to fail but was 200 ok: ${request.url}`);
             
-                recursiveCaller(urls, completeCallback);
+                recursiveCaller(index + 1, completeCallback);
             };
             
             try{
@@ -148,11 +146,11 @@ export class HTTPTestsManager {
                 
             } catch (e) {
 
-                recursiveCaller(urls, completeCallback);
+                recursiveCaller(index + 1, completeCallback);
             }
         }
         
-        recursiveCaller(urls, completeCallback);
+        recursiveCaller(0, completeCallback);
     }
     
     

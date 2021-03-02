@@ -14,6 +14,7 @@ import { StringTestsManager } from './StringTestsManager';
 import { ObjectTestsManager } from './ObjectTestsManager';
 import { FilesManager } from 'turbodepot-node';
 
+declare const Promise: any;
 declare const Buffer: any;
 declare function require(name: string): any;
 
@@ -146,6 +147,9 @@ export class AutomatedBrowserManager {
      */
     constructor() {
         
+        this.httpTestsManager.isAssertExceptionsEnabled = false;
+        this.httpTestsManager.wildcards = this.wildcards;
+            
         this.nodeFs = require('fs');
         this.nodeUrl = require('url');
         this.nodeExecSync = require('child_process').execSync;
@@ -225,14 +229,15 @@ export class AutomatedBrowserManager {
      * @param height The desired browser viewport height. (Note this is the internal area where the website is displayed)
      * @param x The desired browser left corner position
      * @param y The desired browser top corner position
-     * @param completeCallback A method that will be executed once the process finishes correctly
+     *
+     * @return A promise which will end correctly if the process finishes ok or fail with exception otherwise.     
      */
-    setBrowserSizeAndPosition(width: number, height: number, x = 0, y = 0, completeCallback: () => void){
+    setBrowserSizeAndPosition(width: number, height: number, x = 0, y = 0){
     
-        this.driver.executeScript(`return [window.outerWidth - window.innerWidth + ${width}, window.outerHeight - window.innerHeight + ${height}];`)
+        return this.driver.executeScript(`return [window.outerWidth - window.innerWidth + ${width}, window.outerHeight - window.innerHeight + ${height}];`)
             .then((viewportSize: any) =>{
         
-            this.driver.manage().window().setRect({width: viewportSize[0], height: viewportSize[1], x: x, y: y}).then(completeCallback);
+            return this.driver.manage().window().setRect({width: viewportSize[0], height: viewportSize[1], x: x, y: y});
         });
     }
     
@@ -240,22 +245,22 @@ export class AutomatedBrowserManager {
     /**
      * Maximize the browser window just like clicking on the OS maximize button. This method can be called at any time
      *
-     * @param completeCallback A method that will be executed once the process finishes correctly
+     * @return A promise which will end correctly if the process finishes ok or fail with exception otherwise.
      */
-    setBrowserAsMaximized(completeCallback: () => void){
+    setBrowserAsMaximized(){
       
-        this.driver.manage().window().maximize().then(completeCallback);
+        return this.driver.manage().window().maximize();
     }
     
     
     /**
      * Set the full screen state for the browser window. This method can be called at any time
      *
-     * @param completeCallback A method that will be executed once the process finishes correctly
+     * @return A promise which will end correctly if the process finishes ok or fail with exception otherwise.
      */
-    setBrowserAsFullScreen(completeCallback: () => void){
+    setBrowserAsFullScreen(){
       
-        this.driver.manage().window().fullscreen().then(completeCallback);
+        return this.driver.manage().window().fullscreen();
     }
     
     
@@ -263,44 +268,45 @@ export class AutomatedBrowserManager {
      * Specify which of the currently open tabs is active for the user.
      *
      * @param tabIndex The numeric index for the tab that we want to set as active. 0 is the first, the one most to the left
-     * @param completeCallback A method that will be executed once the process finishes correctly
+     *
+     * @return A promise which will end correctly if the process finishes ok or fail with exception otherwise.
      */
-    setBrowserActiveTab(tabIndex:number, completeCallback: () => void){
+    setBrowserActiveTab(tabIndex:number){
     
-        this.driver.getAllWindowHandles().then((windowHandles: any) => {
+        return this.driver.getAllWindowHandles().then((windowHandles: any) => {
             
-            this.driver.switchTo().window(windowHandles[tabIndex]).then(completeCallback);
+            return this.driver.switchTo().window(windowHandles[tabIndex]);
         }); 
     }
     
     
     /**
-     * Remove all the currently visible entries from the browser console 
-     * 
-     * @param completeCallback A method that will be executed once the browser console is cleared
+     * Remove all the currently visible entries from the browser console
+     *
+     * @return A promise which will end correctly if the process finishes ok or fail with exception otherwise.
      */
-    clearConsole(completeCallback: () => void){
+    clearConsole(){
         
-        return this.driver.executeScript("return console.clear()").then(completeCallback);  
+        return this.driver.executeScript("return console.clear()");  
     }
 
 
     /**
      * Wait till the browser has finished loading everything and is in a ready state.
-     * If it is already ready once this method is called, the complete callback will be called inmediately
-     * 
-     * @param completeCallback A method that will be executed once the browser is ready
+     * If it is already ready once this method is called, the promise then() will be called inmediately
+     *
+     * @return A promise which will end correctly if the process finishes ok or fail with exception otherwise.
      */
-    waitTillBrowserReady(completeCallback: () => void){
+    waitTillBrowserReady(){
         
-        this.driver.wait(() => {
+        return this.driver.wait(() => {
             
             return this.driver.executeScript('return document.readyState').then((readyState: any) => {
                 
                 return readyState === 'complete';
             });
             
-        }, this.waitTimeout).then(completeCallback).catch((e:Error) => {
+        }, this.waitTimeout).then().catch((e:Error) => {
             
             throw new Error('Error waiting for browser ready: ' + e.toString());
         });
@@ -311,11 +317,12 @@ export class AutomatedBrowserManager {
      * Wait till the specified number of milliseconds has passed.  
      * 
      * @param milliseconds The number of milliseconds that we want to wait
-     * @param completeCallback A method that will be called once the time has passed
+     *
+     * @return A promise which will end correctly if the process finishes ok or fail with exception otherwise.
      */
-    waitMilliseconds(milliseconds:number, completeCallback: () => void){
+    waitMilliseconds(milliseconds:number){
         
-        setTimeout(completeCallback, milliseconds);
+        return new Promise((resolve:any) => setTimeout(resolve, milliseconds));
     }
     
     
@@ -324,35 +331,36 @@ export class AutomatedBrowserManager {
      * If we have defined any wildcard, they will be replaced on the url before requesting it on the browser.
      * 
      * @param url The url we want to open with the browser
-     * @param completeCallback A method that will be executed once the url loading finishes. A single results object will be passed
-     *        to this method, containing all the loaded page information we may need: title, source (may have been altered by the browser after loading is complete) 
-     *        and finalUrl (in case any redirection happened from the original url)
+     * @return A promise. When resolved correctly, an object will be passed to the .then() method with all the information regarding the loaded page we may need:
+     *         title, source (may have been altered by the browser after loading is complete) and finalUrl (in case any redirection happened from the original url)
      */
-    loadUrl(url: string, completeCallback: (results: {title:string; source:any; finalUrl:string}) => void){
+    loadUrl(url: string){
         
-        let results: any = {};
+        let results: {title:string; source:any; finalUrl:string} = {title: '', source: '', finalUrl: ''};
     
-        this.driver.get(this.stringTestsManager.replaceWildCardsOnText(url, this.wildcards)).then(() => {
+        url = this.stringTestsManager.replaceWildCardsOnText(url, this.wildcards);
+    
+        return this.driver.get(url).then(() => {
             
-            this.driver.getTitle().then((title: any) => {
+            return this.driver.getTitle().then((title: any) => {
             
                 results.title = title;
                 
-                this.driver.executeScript("return document.documentElement.outerHTML").then((html: string) => {
+                return this.driver.executeScript("return document.documentElement.outerHTML").then((html: string) => {
                 
                     results.source = html;
 
-                    this.driver.getCurrentUrl().then((finalUrl: string) => {
+                    return this.driver.getCurrentUrl().then((finalUrl: string) => {
                         
                         results.finalUrl = finalUrl;
                         
-                        this.driver.manage().logs().get('browser').then((browserLogs: any) => {
+                        return this.driver.manage().logs().get('browser').then((browserLogs: any) => {
                             
                             this.logEntries = browserLogs;
                             
-                            this.waitTillBrowserReady(() => {
+                            return this.waitTillBrowserReady().then(() => {
                                 
-                                completeCallback(results);
+                                return results;
                             });
                         }); 
                     });
@@ -361,7 +369,7 @@ export class AutomatedBrowserManager {
             
         }).catch((e:Error) => {
             
-            throw new Error('Error in loadUrl calling driver.get for ' + url +':\n' + e.toString());
+            throw new Error('Error in loadUrl trying to get ' + url +':\n' + e.toString());
         });
     }
     
@@ -370,7 +378,7 @@ export class AutomatedBrowserManager {
      * Perform several tests regarding the current state of the browser: Verify the current url, title, html original code, html
      * loaded code, errors on console, etc..
      * 
-     * If any of the specified assertions fail, an exception will be thrown and complete callback won't be executed
+     * If any of the specified assertions fail, an exception will be thrown
      * 
      * @param asserts An object that defines the assertions that will be applied by this test. Following properties are accepted (skip them or set to null when not used):<br>
      *        "url" A string or an array of strings with texts that must exist in the same order on the current url<br>              
@@ -389,12 +397,10 @@ export class AutomatedBrowserManager {
      *        "loadedHtmlNotContains" A string or an array of strings with texts tat must NOT exist on the html code that is loaded (and maybe altered) by the browser
      *        "tabsCount" A number specifiyng how many tabs must currently exist on the browser
      *        
-     * @param completeCallback A method that will be called once all the tests have been successfully executed on the current browser state
-     * 
-     * @return void
+     * @return A promise which will end correctly if the process finishes ok or fail with exception otherwise.
      */
-    assertBrowserState(asserts: any, completeCallback: () => void){
-        
+    assertBrowserState(asserts: any){
+
         let anyErrors: string[] = [];
     
         this.objectTestsManager.assertIsObject(asserts);
@@ -412,82 +418,9 @@ export class AutomatedBrowserManager {
             anyErrors.push(e.toString());
         }
         
-        this.waitTillBrowserReady(() => {
+        return this.waitTillBrowserReady().then(() => {
         
-            // An auxiliary method to perform the final errors test and call the complete callback
-            let finish = () => {
-                
-                if(anyErrors.length > 0){
-                    
-                    throw new Error(`AutomatedBrowserManager.assertBrowserState failed with ${anyErrors.length} errors:\n` + anyErrors.join('\n'));
-                }
-                
-                completeCallback();
-            }
-            
-            // An auxiliary method that is used to validate the specified html code with the specified asserts
-            let validateHtml = (html: string, url: string, startsWith: string, endsWith: string, notContains: string, contains: string, regExp: RegExp) => {
-                
-                if(startsWith !== null){
-                    
-                    try {
-
-                        this.stringTestsManager.assertTextStartsWith(html, startsWith,
-                            `Source expected to start with: $fragment\nBut started with: $startedWith\nFor the url: ${url}`);
-                        
-                    } catch (e) {
-
-                        anyErrors.push(e.toString());
-                    }
-                }
-                 
-                if(endsWith !== null){
-                   
-                    try {
-    
-                        this.stringTestsManager.assertTextEndsWith(html, endsWith,
-                            `Source expected to end with: $fragment\nBut ended with: $endedWith\nFor the url: ${url}`);
-                         
-                    } catch (e) {
-                         
-                        anyErrors.push(e.toString());
-                    }
-                }
-                 
-                if(notContains !== null){
-                     
-                    try {
-
-                        this.stringTestsManager.assertTextNotContainsAny(html, notContains,
-                            `Source NOT expected to contain: $fragment\nBut contained it for the url: ${url}`);
-                         
-                    } catch (e) {
-                         
-                        anyErrors.push(e.toString());
-                    }
-                }
-                 
-                if(contains !== null){
-
-                    try {
-                         
-                        this.stringTestsManager.assertTextContainsAll(html,
-                            this.objectTestsManager.replaceWildCardsOnObject(contains, this.wildcards),
-                            `\nError searching for: $fragment on text in the url: ${url}\n$errorMsg\n`);
-                              
-                    } catch (e) {
-                     
-                        anyErrors.push(e.toString());
-                    }
-                }
-                
-                if(regExp !== null && !regExp.test(html)){
-
-                    anyErrors.push(`\nSource does not match rexExp:\n${regExp.toString()}\nfor the url: ${url}`);
-                }
-            }
-            
-            this.driver.executeScript('return window.location.href').then((browserUrl: any) => {
+            return this.driver.executeScript('return window.location.href').then((browserUrl: string) => {
                 
                 // Check if the current url contents must be tested
                 if(asserts.hasOwnProperty('url') && asserts.url !== null){
@@ -504,7 +437,7 @@ export class AutomatedBrowserManager {
                     }
                 }
                 
-                this.driver.getTitle().then((browserTitle: any) => {
+                return this.driver.getTitle().then((browserTitle: any) => {
                     
                     // Make sure no 404 error is shown at the browser title
                     try {
@@ -533,7 +466,7 @@ export class AutomatedBrowserManager {
                     
                     // Note that calling this to get the browser logs resets the logs buffer, so the next time is called it will be empty.
                     // This is why we store all the logs on the logEntries property, so they can all be available for the currently loaded url
-                    this.driver.manage().logs().get('browser').then((browserLogs: any) => {
+                    return this.driver.manage().logs().get('browser').then((browserLogs: any) => {
                         
                         this.logEntries.concat(browserLogs);
 
@@ -570,17 +503,26 @@ export class AutomatedBrowserManager {
                         
                         // Get the html code as it is loaded by the browser. This code may be different from the one that is given by the server,
                         // cause it may be altered by the browser or any dynamic javascript code.
-                        this.driver.executeScript("return document.documentElement.outerHTML").then((html: string) => {
+                        return this.driver.executeScript("return document.documentElement.outerHTML").then((html: string) => {
                         
-                            validateHtml(html, browserUrl,
+                            this._validateHtml(anyErrors, html, browserUrl,
                                     asserts.hasOwnProperty('loadedHtmlStartsWith') ? asserts.loadedHtmlStartsWith : null,
                                     asserts.hasOwnProperty('loadedHtmlEndsWith') ? asserts.loadedHtmlEndsWith : null,
                                     asserts.hasOwnProperty('loadedHtmlNotContains') ? asserts.loadedHtmlNotContains : null,
                                     asserts.hasOwnProperty('loadedHtmlContains') ? asserts.loadedHtmlContains : null,
                                     asserts.hasOwnProperty('loadedHtmlRegExp') ? asserts.loadedHtmlRegExp : null);
                             
-                            this.driver.getAllWindowHandles().then((windowHandles: any) => {
+                            return this.driver.getAllWindowHandles().then((windowHandles: any) => {
                             
+                                // An auxiliary method to perform the final errors test
+                                let finish = () => {
+                                    
+                                    if(anyErrors.length > 0){
+                                        
+                                        throw new Error(`AutomatedBrowserManager.assertBrowserState failed with ${anyErrors.length} errors:\n` + anyErrors.join('\n'));
+                                    }
+                                }
+                                
                                 // If tabsCount is specified, check that the browser tabs number matches it   
                                 if(asserts.hasOwnProperty('tabsCount') && asserts.tabsCount !== windowHandles.length){
                                     
@@ -592,75 +534,158 @@ export class AutomatedBrowserManager {
                                 if((!asserts.hasOwnProperty('sourceHtmlStartsWith') || asserts.sourceHtmlStartsWith === null) &&
                                    (!asserts.hasOwnProperty('sourceHtmlEndsWith') || asserts.sourceHtmlEndsWith === null) &&
                                    (!asserts.hasOwnProperty('sourceHtmlNotContains') || asserts.sourceHtmlNotContains === null) &&
-                                   (!asserts.hasOwnProperty('sourceHtmlContains') || asserts.sourceHtmlContains === null),
+                                   (!asserts.hasOwnProperty('sourceHtmlContains') || asserts.sourceHtmlContains === null) &&
                                    (!asserts.hasOwnProperty('sourceHtmlRegExp') || asserts.sourceHtmlRegExp === null)){
                                     
-                                    finish();
-                                    
-                                    return;
+                                    return finish();
                                 }
                                 
                                 // If the url to test belongs to a local file, we will directly get the source code from there.
                                 let urlLocalFileContents = '';
                                     
                                 try {
-    
+                                    
                                     urlLocalFileContents = this.nodeFs.readFileSync(this.nodeUrl.fileURLToPath(browserUrl), "utf8");
     
                                 } catch (e) {}
     
                                 if(urlLocalFileContents !== ''){
     
-                                    validateHtml(urlLocalFileContents, browserUrl,
+                                    this._validateHtml(anyErrors, urlLocalFileContents, browserUrl,
                                             asserts.hasOwnProperty('sourceHtmlStartsWith') ? asserts.sourceHtmlStartsWith : null,
                                             asserts.hasOwnProperty('sourceHtmlEndsWith') ? asserts.sourceHtmlEndsWith : null,
                                             asserts.hasOwnProperty('sourceHtmlNotContains') ? asserts.sourceHtmlNotContains : null,
                                             asserts.hasOwnProperty('sourceHtmlContains') ? asserts.sourceHtmlContains : null,
                                             asserts.hasOwnProperty('sourceHtmlRegExp') ? asserts.sourceHtmlRegExp : null);
                                     
-                                    finish();
-                                    
-                                    return;
+                                    return finish();
                                 }
                                 
-                                // Perform an http request to get the url real code. This code may be different from the one that is found at the browser level,
-                                // cause the browser or any javascript dynamic process may alter it.
-                                try{
+                                // Perform an http request to get the url real code. This code may be different from the one that is found at the 
+                                // browser level, cause the browser or any javascript dynamic process may alter it.
+                                return new Promise ((resolve:any, reject:any) => {
+                                
+                                    try{
                                     
-                                    let request = new HTTPManagerGetRequest(browserUrl);
-                                    
-                                    request.errorCallback = (errorMsg: string, errorCode: number) => {
-                                    
-                                        anyErrors.push('Could not load url: ' + browserUrl + '\nError code: ' + errorCode + '\n' + errorMsg);
-                                    };
-                                    
-                                    request.successCallback = (html: any) => {
-                                       
-                                        validateHtml(html, browserUrl,
-                                            asserts.hasOwnProperty('sourceHtmlStartsWith') ? asserts.sourceHtmlStartsWith : null,
-                                            asserts.hasOwnProperty('sourceHtmlEndsWith') ? asserts.sourceHtmlEndsWith : null,
-                                            asserts.hasOwnProperty('sourceHtmlNotContains') ? asserts.sourceHtmlNotContains : null,
-                                            asserts.hasOwnProperty('sourceHtmlContains') ? asserts.sourceHtmlContains : null,
-                                            asserts.hasOwnProperty('sourceHtmlRegExp') ? asserts.sourceHtmlRegExp : null);
-                                     };
+                                        let request = new HTTPManagerGetRequest(browserUrl);
+                                        
+                                        request.errorCallback = (errorMsg: string, errorCode: number) => {
+                                        
+                                            anyErrors.push('Could not load url: ' + browserUrl + '\nError code: ' + errorCode + '\n' + errorMsg);
+                                        };
+                                        
+                                        request.successCallback = (html: any) => {
+                                           
+                                            this._validateHtml(anyErrors, html, browserUrl,
+                                                asserts.hasOwnProperty('sourceHtmlStartsWith') ? asserts.sourceHtmlStartsWith : null,
+                                                asserts.hasOwnProperty('sourceHtmlEndsWith') ? asserts.sourceHtmlEndsWith : null,
+                                                asserts.hasOwnProperty('sourceHtmlNotContains') ? asserts.sourceHtmlNotContains : null,
+                                                asserts.hasOwnProperty('sourceHtmlContains') ? asserts.sourceHtmlContains : null,
+                                                asserts.hasOwnProperty('sourceHtmlRegExp') ? asserts.sourceHtmlRegExp : null);
+                                         };
+        
+                                        // Once the request to get the real browser code is done, we will check if any error has happened
+                                        request.finallyCallback = () => {
+                                            
+                                            try{
+                                                
+                                                finish();
+                                                resolve();
+                                                
+                                            } catch (e) {
+        
+                                                reject(e);
+                                            }
+                                        }
+                                        
+                                        this.httpManager.execute(request);    
+                                        
+                                    } catch (e) {
+        
+                                        anyErrors.push('Error performing http request to '+ browserUrl + '\n' + e.toString());
+                                        
+                                        try{
+                                                
+                                            finish();
+                                            resolve();
+                                            
+                                        } catch (e) {
     
-                                    // Once the request to get the real browser code is done, we will check if any error has happened
-                                    request.finallyCallback = finish;
-                                    
-                                    this.httpManager.execute(request);    
-                                    
-                                } catch (e) {
-    
-                                    anyErrors.push('Error performing http request to '+ browserUrl + '\n' + e.toString());
-                                    
-                                    finish();
-                                }
+                                            reject(e);
+                                        }
+                                    }
+                                });
                             });
                         });
                     });
                 });
             });
         });
+    }
+    
+    
+    /**
+     * An auxiliary method that is used to validate the specified html code with the specified asserts
+     */
+    private _validateHtml(anyErrors:any[], html: string, url: string, startsWith: string, endsWith: string, notContains: string, contains: string, regExp: RegExp) {
+        
+        if(startsWith !== null){
+            
+            try {
+
+                this.stringTestsManager.assertTextStartsWith(html, startsWith,
+                    `Source expected to start with: $fragment\nBut started with: $startedWith\nFor the url: ${url}`);
+                
+            } catch (e) {
+
+                anyErrors.push(e.toString());
+            }
+        }
+         
+        if(endsWith !== null){
+           
+            try {
+
+                this.stringTestsManager.assertTextEndsWith(html, endsWith,
+                    `Source expected to end with: $fragment\nBut ended with: $endedWith\nFor the url: ${url}`);
+                 
+            } catch (e) {
+                 
+                anyErrors.push(e.toString());
+            }
+        }
+         
+        if(notContains !== null){
+             
+            try {
+
+                this.stringTestsManager.assertTextNotContainsAny(html, notContains,
+                    `Source NOT expected to contain: $fragment\nBut contained it for the url: ${url}`);
+                 
+            } catch (e) {
+                 
+                anyErrors.push(e.toString());
+            }
+        }
+         
+        if(contains !== null){
+
+            try {
+                 
+                this.stringTestsManager.assertTextContainsAll(html,
+                    this.objectTestsManager.replaceWildCardsOnObject(contains, this.wildcards),
+                    `\nError searching for: $fragment on text in the url: ${url}\n$errorMsg\n`);
+                      
+            } catch (e) {
+             
+                anyErrors.push(e.toString());
+            }
+        }
+        
+        if(regExp !== null && !regExp.test(html)){
+
+            anyErrors.push(`\nSource does not match rexExp:\n${regExp.toString()}\nfor the url: ${url}`);
+        }
     }
     
     
@@ -674,9 +699,10 @@ export class AutomatedBrowserManager {
      * @param urls An array of objects where each one contains the following properties:
      *        "url" the url to test (mandatory)
      *        Any of the properties that can be specifed with the assertBrowserState() method can also be used.
-     * @param completeCallback A method that will be called once all the urls from the list have been tested.
+     *
+     * @return A promise which will end correctly if the process finishes ok or fail with exception otherwise.
      */
-    assertUrlsLoadOk(urls: any[], completeCallback: () => void){
+    assertUrlsLoadOk(urls: any[]){
     
         let anyErrors: string[] = [];
         
@@ -687,7 +713,7 @@ export class AutomatedBrowserManager {
         }
         
         // Load all the urls on the list and perform a request for each one.
-        let recursiveCaller = (urls: any[], completeCallback: () => void) => {
+        let recursiveCaller = (urls: any[]) => {
             
             if(urls.length <= 0){
                 
@@ -696,25 +722,25 @@ export class AutomatedBrowserManager {
                     throw new Error(`AutomatedBrowserManager.assertUrlsLoadOk failed with ${anyErrors.length} errors:\n` + anyErrors.join('\n'));
                 }
                 
-                return completeCallback();
+                return;
             }
         
             let entry = urls.shift();
             entry.url = this.stringTestsManager.replaceWildCardsOnText(entry.url, this.wildcards);
             
-            this.loadUrl(entry.url, () => {
+            return this.loadUrl(entry.url).then(() => {
 
                 // The url assert must be removed from the entry to prevent it from failing on the assertBrowserState method
                 delete entry.url;
 
-                this.assertBrowserState(entry, () => {
+                return this.assertBrowserState(entry).then(() => {
 
-                    recursiveCaller(urls, completeCallback);
+                    return recursiveCaller(urls);
                 });            
             });
         }
         
-        recursiveCaller(urls, completeCallback);
+        return recursiveCaller(urls);
     }
         
     
@@ -726,9 +752,10 @@ export class AutomatedBrowserManager {
      *        "url" the url to test
      *        "to" the url (or a fragment of it) that must be the final redirection target for the provided url
      *        "comment" (Optional) An informative comment about the redirect purpose
-     * @param completeCallback A method that will be called once all the urls from the list have been tested.
+     *
+     * @return A promise which will end correctly if the process finishes ok or fail with exception otherwise.
      */
-    assertUrlsRedirect(urls: any[], completeCallback: () => void){
+    assertUrlsRedirect(urls: any[]){
     
         // Fail if list has duplicate values
         if(ArrayUtils.hasDuplicateElements(urls.map(l => l.url))){
@@ -739,7 +766,7 @@ export class AutomatedBrowserManager {
         let anyErrors: string[] = [];
         
         // Load all the urls on the list and perform a request for each one.
-        let recursiveCaller = (urls: any[], completeCallback: () => void) => {
+        let recursiveCaller = (urls: any[]) => {
             
             if(urls.length <= 0){
                 
@@ -748,27 +775,27 @@ export class AutomatedBrowserManager {
                     throw new Error(`failed with ${anyErrors.length} errors:\n` + anyErrors.join('\n'));
                 }
                 
-                return completeCallback();
+                return;
             }
             
             let entry = urls.shift();
             entry.url = this.stringTestsManager.replaceWildCardsOnText(entry.url, this.wildcards);
             entry.to = this.stringTestsManager.replaceWildCardsOnText(entry.to, this.wildcards);
             
-            this.loadUrl(entry.url, (results) => {
+            return this.loadUrl(entry.url).then((results:any) => {
                 
                 // If the finalUrl does not end with entry.to value, the test will fail
                 if(results.finalUrl.indexOf(entry.to, results.finalUrl.length - entry.to.length) === -1){
                     
-                    anyErrors.push('Url redirect failed. expected:\n    ' + entry.url +
+                    anyErrors.push('Url redirect assertion failed. expected:\n    ' + entry.url +
                         ' to redirect to:\n    ' + entry.to + ' but was:\n    ' + results.finalUrl);
                 }
                     
-                recursiveCaller(urls, completeCallback);
+                return recursiveCaller(urls);
             });
         }
         
-        recursiveCaller(urls, completeCallback);
+        return recursiveCaller(urls);
     }
     
     
@@ -780,20 +807,30 @@ export class AutomatedBrowserManager {
      * @see HTTPTestsManager.assertUrlsFail
      * 
      * @param urls An array of strings where each item is an url to test
-     * @param completeCallback A method that will be called once all the urls from the list have been tested.
      */
-    assertUrlsFail(urls: string[], completeCallback: () => void){
+    assertUrlsFail(urls: string[]){
     
-        this.httpTestsManager.wildcards = this.wildcards;
-        
-        try {
-
-            this.httpTestsManager.assertUrlsFail(urls, completeCallback);
+        return new Promise ((resolve:any, reject:any) => {
             
-        } catch (e) {
-
-            throw new Error(e.message);
-        }
+            try{
+                
+                this.httpTestsManager.assertUrlsFail(urls, (assertErrors:any) => {
+                
+                    if(assertErrors && assertErrors.length > 0){
+                        
+                        reject(new Error(assertErrors.join('\n')));
+                    
+                    }else{
+                        
+                        resolve();
+                    }                    
+                });
+                
+            }catch(e){
+                    
+                reject(e);
+            };
+        });
     }
     
     
@@ -803,22 +840,23 @@ export class AutomatedBrowserManager {
      * 
      * @param xpaths A list with the xpath expressions that we are looking for (Examples on assertClickableXpath method docs)
      * @param exist True if we expect the elements to exist, false otherwise
-     * @param completeCallback A method that will be called once the elements are found and will receive all the located instances
+     *
+     * @return A promise. When resolved correctly, all the found instances will be passed to the .then() method
      */
-    assertExistXpath(xpaths:string|string[], exist: boolean, completeCallback: (elements: any[]) => void){
+    assertExistXpath(xpaths:string|string[], exist: boolean){
         
         let elemensFound: any[] = [];
         
-        let recursiveCaller = (xpathsArray:string[], index: number, completeCallback: (e: any[]) => void) => {
+        let recursiveCaller = (xpathsArray:string[], index: number) => {
             
             if(index >= xpathsArray.length){
                 
-                return completeCallback(elemensFound);
+                return elemensFound;
             }
             
             if(!exist){
                 
-                this.driver.findElement(this.webdriver.By.xpath(xpathsArray[index]))
+                return this.driver.findElement(this.webdriver.By.xpath(xpathsArray[index]))
                     .then(() => {
                         
                         exist = true;
@@ -832,17 +870,17 @@ export class AutomatedBrowserManager {
                             throw new Error(e.toString());
                         }
                         
-                        recursiveCaller(xpathsArray, index + 1, completeCallback);
+                        return recursiveCaller(xpathsArray, index + 1);
                     });
             
             }else{
                 
-                this.driver.wait(this.webdriver.until.elementLocated(this.webdriver.By.xpath(xpathsArray[index])), this.waitTimeout)
+                return this.driver.wait(this.webdriver.until.elementLocated(this.webdriver.By.xpath(xpathsArray[index])), this.waitTimeout)
                     .then((element:any) => {
                         
                     elemensFound.push(element);
                         
-                    recursiveCaller(xpathsArray, index + 1, completeCallback);
+                    return recursiveCaller(xpathsArray, index + 1);
                     
                 }).catch((e:Error) => {
                     
@@ -851,7 +889,7 @@ export class AutomatedBrowserManager {
             }
         }
         
-        recursiveCaller(ArrayUtils.isArray(xpaths) ? xpaths as string[] : [xpaths as string], 0, completeCallback);  
+        return recursiveCaller(ArrayUtils.isArray(xpaths) ? xpaths as string[] : [xpaths as string], 0);  
     }
     
     
@@ -861,13 +899,14 @@ export class AutomatedBrowserManager {
      * 
      * @param ids A list with the ids for the html elements that we are looking for
      * @param exist True if we expect the elements to exist, false otherwise
-     * @param completeCallback A method that will be called once the elements are found and will receive all the located instances
+     *
+     * @return A promise. When resolved correctly, all the found instances will be passed to the .then() method
      */
-    assertExistId(ids:string|string[], exist: boolean, completeCallback: (elements: any[]) => void){
+    assertExistId(ids:string|string[], exist: boolean){
         
         ids = ArrayUtils.isArray(ids) ? ids as string[] : [ids as string];
         
-        this.assertExistXpath(ids.map(x => "//*[@id='" + x + "']"), exist, completeCallback);
+        return this.assertExistXpath(ids.map(x => "//*[@id='" + x + "']"), exist);
     }
         
     
@@ -877,13 +916,14 @@ export class AutomatedBrowserManager {
      * 
      * @param elements A list with the name for the html elements that we are looking for
      * @param exist True if we expect the elements to exist, false otherwise
-     * @param completeCallback A method that will be called once the elements are found and will receive all the located instances
+     *
+     * @return A promise. When resolved correctly, all the found instances will be passed to the .then() method
      */
-    assertExistElement(elements:string|string[], exist: boolean, completeCallback: (elements: any[]) => void){
+    assertExistElement(elements:string|string[], exist: boolean){
         
         let elementsArray = ArrayUtils.isArray(elements) ? elements as string[] : [elements as string];
         
-        this.assertExistXpath(elementsArray.map(x => "//" + x), exist, completeCallback);
+        return this.assertExistXpath(elementsArray.map(x => "//" + x), exist);
     }
     
     
@@ -893,27 +933,28 @@ export class AutomatedBrowserManager {
      * 
      * @param xpaths A list with the xpath expressions that we are looking for (Examples on assertClickableXpath method docs)
      * @param visible True if we expect the elements to be visible, false otherwise
-     * @param completeCallback A method that will be called once the elements are found and will receive all the located instances
+     *
+     * @return A promise. When resolved correctly, all the found instances will be passed to the .then() method
      */
-    assertVisibleXpath(xpaths:string|string[], visible: boolean, completeCallback: (elements: any[]) => void){
+    assertVisibleXpath(xpaths:string|string[], visible: boolean){
         
         let xpathsArray = ArrayUtils.isArray(xpaths) ? xpaths as string[] : [xpaths as string];
         
-        this.assertExistXpath(xpathsArray, true, (elementsFound) => {
+        return this.assertExistXpath(xpathsArray, true).then((elementsFound:any) => {
             
-            let recursiveCaller = (index: number, completeCallback: (e: any[]) => void) => {
+            let recursiveCaller = (index: number) => {
                 
                 if(index >= xpathsArray.length){
                     
-                    return completeCallback(elementsFound);
+                    return elementsFound;
                 }
                 
-                this.driver.wait(visible ?
+                return this.driver.wait(visible ?
                     this.webdriver.until.elementIsVisible(elementsFound[index]):
                     this.webdriver.until.elementIsNotVisible(elementsFound[index]), this.waitTimeout)
                     .then(() => {
                         
-                    recursiveCaller(index + 1, completeCallback);
+                    return recursiveCaller(index + 1);
                     
                 }).catch((e:Error) => {
                         
@@ -922,7 +963,7 @@ export class AutomatedBrowserManager {
                 });
             }
             
-            recursiveCaller(0, completeCallback); 
+            return recursiveCaller(0); 
         });
     }
     
@@ -936,15 +977,16 @@ export class AutomatedBrowserManager {
      *        - To search by the href value of all a elements: "//a[contains(@href, 'someurl')]"
      *        - To search by the href value of all a elements that are inside a section element: "//section/a[contains(@href, 'someurl')]"
      * @param clickable True if we expect the elements to be clickable, false otherwise
-     * @param completeCallback A method that will be called once the elements are found and will receive all the located instances
+     *
+     * @return A promise. When resolved correctly, all the found instances will be passed the .then() method
      */
-    assertClickableXpath(xpaths:string|string[], clickable: boolean, completeCallback: (elements: any[]) => void){
+    assertClickableXpath(xpaths:string|string[], clickable: boolean){
         
         let xpathsArray = ArrayUtils.isArray(xpaths) ? xpaths as string[] : [xpaths as string];
         
-        this.assertVisibleXpath(xpathsArray, true, (elementsFound) => {
+        return this.assertVisibleXpath(xpathsArray, true).then((elementsFound:any) => {
             
-            let recursiveCaller = (index: number, completeCallback: (e: any[]) => void) => {
+            let recursiveCaller = (index: number) => {
                 
                 if(index < xpathsArray.length){
                     
@@ -954,22 +996,22 @@ export class AutomatedBrowserManager {
                             (clickable ? 'to be clickable ' : 'to be NON clickable') + '\n' + e.toString());
                     }
                 
-                    this.driver.wait(clickable ?
+                    return this.driver.wait(clickable ?
                         this.webdriver.until.elementIsEnabled(elementsFound[index]) :
                         this.webdriver.until.elementIsDisabled(elementsFound[index]),
                         this.waitTimeout).then(() => {
                     
-                        recursiveCaller(index + 1, completeCallback);
+                        return recursiveCaller(index + 1);
                     
                     }).catch(errorCatcher);
                    
                 }else{
                     
-                     return completeCallback(elementsFound);
+                     return elementsFound;
                 }
             }
             
-            recursiveCaller(0, completeCallback);
+            return recursiveCaller(0);
         })
     }
     
@@ -983,14 +1025,14 @@ export class AutomatedBrowserManager {
      *        - maxDifferentPixels: (default 0) Allowed number of pixels that are allowed to be different between the saved snapshot and the browser viewport contents
      *        - tolerance: (default 0.1) A value between 0 and 1 which defines the threshold to define that a pixel is different or not. 0 means stricter image comparison
      *        - ignoreRegions: An array of objects with x,y, width and height properties where each object defines a rectangular area that will be ignored from the comparison
-     * @param completeCallback A method that will be called once the assert finishes correctly
+     *
+     * @return A promise which will end correctly if the process finishes ok or fail with exception otherwise.
      */
     assertSnapshot(snapShotPath: string,
                    options: { maxDifferentPixels: number,
                               tolerance: number,
                               ignoreRegions: {x: number, y: number, width: number, height: number}[]
-                            },
-                   completeCallback: () => void){
+                            }){
         
         // Init required instances if necessary
         if(this.nodePNG === null){
@@ -1024,10 +1066,10 @@ export class AutomatedBrowserManager {
             throw new Error('Cannot save snapshot to non existant path: ' + snapShotPath);
         }
         
-        this.waitTillBrowserReady(() => {
+        return this.waitTillBrowserReady().then(() => {
  
             // Get the screen shot for the browser window visible contents with selenium
-            this.driver.takeScreenshot().then((data:any) => {
+            return this.driver.takeScreenshot().then((data:any) => {
     
                 let newSnapshot = this.nodePNG.sync.read(Buffer.from(data.replace(/^data:image\/png;base64,/, ''), 'base64'));
     
@@ -1036,7 +1078,7 @@ export class AutomatedBrowserManager {
                 
                     this.filesManager.saveFile(snapShotPath, this.nodePNG.sync.write(newSnapshot));
                         
-                    return completeCallback();
+                    return;
                 }
             
                 // Load the previously stored snapshot to compare it with the new one
@@ -1093,9 +1135,7 @@ export class AutomatedBrowserManager {
                     this.filesManager.saveFile(failSnapshotPath + '-failedSnapshotDiff.png', this.nodePNG.sync.write(diffSnapshot));
 
                     throw new Error(`Snapshot mismatch: Allowed ${options.maxDifferentPixels} different pixels, but found ${differentPixels}\n${snapShotPath}\nSaved new snapshot with ignored regions painted in black and diff file to:\n${StringUtils.getPath(snapShotPath)}\n`);
-                }
-                     
-                completeCallback();
+                };
             });
         });
     }
@@ -1106,16 +1146,15 @@ export class AutomatedBrowserManager {
      * on all its pages against broken links, valid html structure, valid css, ...
      * 
      * @param siteRoot The full url to the root of the site to test
-     * @param completeCallback A method that will be executed once all the tests have finished
+     *
+     * @return A promise which will end correctly if the process finishes ok or fail with exception otherwise.
      */
-    assertWholeWebSite(siteRoot: string, completeCallback: () => void){
+    assertWholeWebSite(siteRoot: string){
         
-        this.loadUrl(siteRoot, (results) => {
+        return this.loadUrl(siteRoot).then((results:any) => {
             
             // TODO
             console.log('TODO - Perform site recursive tests on ' + results.finalUrl);
-            
-            completeCallback();
         });
     }
     
@@ -1125,9 +1164,10 @@ export class AutomatedBrowserManager {
      * 
      * @param id A single string with the id for the element which we want to click or a list of ids that will be sequentially clicked
      *        one after the other. Any failure trying to click any of the provided ids will throw an exception
-     * @param completeCallback A method that will be called once the specified element or all the specified elements are found and a click is performed
+     *
+     * @return A promise which will end correctly if the process finishes ok or fail with exception otherwise.
      */
-    clickById(id:string|string[], completeCallback: () => void){
+    clickById(id:string|string[]){
         
         let ids = ArrayUtils.isArray(id) ? id as string[] : [id as string];
         
@@ -1136,7 +1176,7 @@ export class AutomatedBrowserManager {
             ids[i] = "//*[@id='" + ids[i] + "']";
         }
         
-        this.clickByXpath(ids, completeCallback);
+        return this.clickByXpath(ids);
     }
     
     
@@ -1145,29 +1185,30 @@ export class AutomatedBrowserManager {
      * 
      * @param xpath A single string with the xpath query that lets us find the element which we want to click or a list of xpaths
      *        that will be sequentially clicked one after the other. Any failure trying to click any of the provided xpaths will throw an exception
-     * @param completeCallback A method that will be called once the specified element or all the specified elements are found and a click is performed
+     *
+     * @return A promise which will end correctly if the process finishes ok or fail with exception otherwise.
      */
-    clickByXpath(xpaths:string|string[], completeCallback: () => void){
+    clickByXpath(xpaths:string|string[]){
     
         let xpathsArray = ArrayUtils.isArray(xpaths) ? xpaths as string[] : [xpaths as string];
     
-        let recursiveCaller = (index: number, completeCallback: () => void) => {
+        let recursiveCaller = (index: number) => {
             
             if(index >= xpathsArray.length){
                 
-                return completeCallback();
+                return;
             }
             
-            this._clickByXpathAux(xpathsArray[index], 5, () => {
+            return this._clickByXpathAux(xpathsArray[index], 5).then(() => {
                 
-                this.waitMilliseconds(xpathsArray.length <= 0 ? 0 : 1500, () => {
+                return this.waitMilliseconds(xpathsArray.length <= 0 ? 0 : 1500).then(() => {
                     
-                    recursiveCaller(index + 1, completeCallback);
+                    return recursiveCaller(index + 1);
                 });
             });      
         }
         
-        recursiveCaller(0, completeCallback);   
+        return recursiveCaller(0);   
     }
     
     
@@ -1176,17 +1217,12 @@ export class AutomatedBrowserManager {
      * 
      * @param xpath A single string with the xpath query that lets us find the element which we want to click. Any failure trying to click will throw an exception
      * @param attempts Number of times the wait for element to be clickable and click process will be retried before throwing an exception if click is not possible.
-     * @param completeCallback A method that will be called once the specified element is found and a click is performed
      */
-    private _clickByXpathAux(xpath:string, attempts: number, completeCallback: () => void){
+    private _clickByXpathAux(xpath:string, attempts: number){
     
-        this.assertClickableXpath(xpath, true, (elements) => {
+        return this.assertClickableXpath(xpath, true).then((elements:any) => {
                 
-            elements[0].click().then(() => {
-                
-                completeCallback();
-            
-            }).catch((e:Error) => {
+            return elements[0].click().then().catch((e:Error) => {
     
                 if(attempts <= 0){
                     
@@ -1194,7 +1230,7 @@ export class AutomatedBrowserManager {
                 
                 }else{
                     
-                    this._clickByXpathAux(xpath, attempts - 1, completeCallback); 
+                    return this._clickByXpathAux(xpath, attempts - 1); 
                 }
             });
         });
@@ -1205,11 +1241,12 @@ export class AutomatedBrowserManager {
      * Remove all text for the specified document element
      * 
      * @param id The html id for the element from which we want to clear the text
-     * @param completeCallback A method that will be called once the specified element is found and the text is cleared
+     *
+     * @return A promise which will end correctly if the process finishes ok or fail with exception otherwise.
      */
-    clearInputById(id:string, completeCallback: () => void){
+    clearInputById(id:string){
         
-        this.clearInputByXpath("//*[@id='" + id + "']", completeCallback);
+        return this.clearInputByXpath("//*[@id='" + id + "']");
     }
     
     
@@ -1217,17 +1254,18 @@ export class AutomatedBrowserManager {
      * Remove all text for the specified document element
      * 
      * @param xpath The xpath query that lets us find element from which we want to clear the text
-     * @param completeCallback A method that will be called once the specified element is found and the text is cleared
+     *
+     * @return A promise which will end correctly if the process finishes ok or fail with exception otherwise.
      */
-    clearInputByXpath(xpath:string, completeCallback: () => void){
+    clearInputByXpath(xpath:string){
         
-        this.driver.wait(this.webdriver.until.elementLocated(this.webdriver.By.xpath(xpath)), this.waitTimeout)
+        return this.driver.wait(this.webdriver.until.elementLocated(this.webdriver.By.xpath(xpath)), this.waitTimeout)
             .then((element: any) => {
             
-            element.clear().then(() => {
+            return element.clear().then(() => {
                 
                 // We send a backspace key to make sure that the key change events are fired on the component
-                element.sendKeys("\b").then(completeCallback);
+                return element.sendKeys("\b");
             });
         
         }).catch((e:Error) => {
@@ -1242,11 +1280,12 @@ export class AutomatedBrowserManager {
      * 
      * @param id The html id for the element that we want to send text to
      * @param text The text we want to send
-     * @param completeCallback A method that will be called once the specified element is found and the text is sent
+     *
+     * @return A promise which will end correctly if the process finishes ok or fail with exception otherwise.
      */
-    sendKeysById(id:string, text:string, completeCallback: () => void){
+    sendKeysById(id:string, text:string){
         
-        this.sendKeysByXpath("//*[@id='" + id + "']", text, completeCallback);
+        return this.sendKeysByXpath("//*[@id='" + id + "']", text);
     }
     
     
@@ -1255,14 +1294,15 @@ export class AutomatedBrowserManager {
      * 
      * @param xpath The xpath query that lets us find element to which we want to send text
      * @param text The text we want to send
-     * @param completeCallback A method that will be called once the specified element is found and the text is sent
+     *
+     * @return A promise which will end correctly if the process finishes ok or fail with exception otherwise.
      */
-    sendKeysByXpath(xpath:string, text:string, completeCallback: () => void){
+    sendKeysByXpath(xpath:string, text:string){
         
-        this.driver.wait(this.webdriver.until.elementLocated(this.webdriver.By.xpath(xpath)), this.waitTimeout)
+        return this.driver.wait(this.webdriver.until.elementLocated(this.webdriver.By.xpath(xpath)), this.waitTimeout)
             .then((element: any) => {
             
-            element.sendKeys(text).then(completeCallback);
+            return element.sendKeys(text);
         
         }).catch((e:Error) => {
             
@@ -1276,11 +1316,12 @@ export class AutomatedBrowserManager {
      * 
      * @param id The html id for the element
      * @param attribute The attribute that we want to read
-     * @param completeCallback A method that will be called once the specified attribute value is found. Attribute value will be passed.
+     *
+     * @return A promise. When resolved correctly, the attribute value will be passed to the .then() method
      */
-    getAttributeById(id:string, attribute:string, completeCallback: (attributeValue: string) => void){
+    getAttributeById(id:string, attribute:string){
         
-        this.getAttributeByXpath("//*[@id='" + id + "']", attribute, completeCallback);
+        return this.getAttributeByXpath("//*[@id='" + id + "']", attribute);
     }
     
     
@@ -1289,14 +1330,15 @@ export class AutomatedBrowserManager {
      * 
      * @param xpath The xpath query that lets us find the element
      * @param attribute The attribute that we want to read
-     * @param completeCallback A method that will be called once the specified attribute value is found. Attribute value will be passed.
+     *
+     * @return A promise which will end correctly if the process finishes ok or fail with exception otherwise.
      */
-    getAttributeByXpath(xpath:string, attribute:string, completeCallback: (text: string) => void){
+    getAttributeByXpath(xpath:string, attribute:string){
         
-        this.driver.wait(this.webdriver.until.elementLocated(this.webdriver.By.xpath(xpath)), this.waitTimeout)
+        return this.driver.wait(this.webdriver.until.elementLocated(this.webdriver.By.xpath(xpath)), this.waitTimeout)
             .then((element: any) => {
             
-            element.getAttribute(attribute).then(completeCallback);
+            return element.getAttribute(attribute);
         
         }).catch((e:Error) => {
             
@@ -1306,21 +1348,22 @@ export class AutomatedBrowserManager {
     
     
     /**
-     * Allows us to secuentially execute any of this class methods one after the other by chaining them via the completeCallback method.
+     * Allows us to secuentially execute any of this class methods one after the other by chaining them via promises.
      * It is basically a shortcut to execute several browser automations one after the other with a compact syntax
      * 
-     * @param queries An array of arrays where each element will define a single call to one of the class methods. First element must be the
-     *        method name and next ones the method parameter values. Each call will wait till the completeCallback is executed, and then the 
+     * @param queries An array of arrays where each element will define a single call to one of this class methods. First element must be the
+     *        method name and next ones the method parameter values. Each call will wait till its promise is executed, and then the 
      *        next of the list will be called, till all finish. If any error happens, execution will be interrupted.
-     * @param completeCallback A method that will be called once all the calls of the query have been executed correctly.
+     *
+     * @return A promise which will end correctly if the process finishes ok or fail with exception otherwise.
      */
-    queryCalls(queries: any[], completeCallback: () => void){
+    queryCalls(queries: any[]){
         
-        let recursiveCaller = (queries: any[], completeCallback: () => void) => {
+        let recursiveCaller = (queries: any[]) => {
             
             if(queries.length <= 0){
                 
-                return completeCallback();
+                return;
             }
             
             let query = queries[0];
@@ -1330,16 +1373,17 @@ export class AutomatedBrowserManager {
                 
                 let functionObject = (this as any)[functionName];
             
-                if(functionObject.length !== query.length){
+                if(functionObject.length !== (query.length - 1)){
                     
-                    throw new Error('Method ' + functionName + ' expects ' + (functionObject.length - 1) + ' arguments, but received ' + (query.length - 1));
+                    throw new Error('Method ' + functionName + ' expects ' + functionObject.length + ' arguments, but received ' + (query.length - 1));
                 }
                 
-                // Run the method, passing all the specified parameters and adding a call to the recursive caller as the last parameter
-                functionObject.apply(this, query.slice(1).concat(() => {
+                // Run the method passing all the parameters that are specified at the query element, and execute the recursiveCaller
+                // at the then() part of the returned promise
+                return functionObject.apply(this, query.slice(1)).then(() => {
                     
-                    recursiveCaller(queries.slice(1), completeCallback);
-                }));
+                    return recursiveCaller(queries.slice(1));
+                });
             
             }else{
                 
@@ -1347,7 +1391,7 @@ export class AutomatedBrowserManager {
             }
         }
         
-        recursiveCaller(queries, completeCallback); 
+        return recursiveCaller(queries); 
     }
     
     
@@ -1355,15 +1399,16 @@ export class AutomatedBrowserManager {
      * Close the specified browser tab
      *
      * @param tabIndex The numeric index for the tab that we want to close. 0 is the first, the one most to the left
-     * @param completeCallback A method that will be executed once the process finishes correctly
+     *
+     * @return A promise which will end correctly if the process finishes ok or fail with exception otherwise.
      */
-    closeBrowserTab(tabIndex:number, completeCallback: () => void){
+    closeBrowserTab(tabIndex:number){
     
-        this.driver.getAllWindowHandles().then((windowHandles: any) => {
+        return this.driver.getAllWindowHandles().then((windowHandles: any) => {
             
-            this.driver.switchTo().window(windowHandles[tabIndex]).then(() => {
+            return this.driver.switchTo().window(windowHandles[tabIndex]).then(() => {
                 
-                 this.driver.close().then(completeCallback);
+                 return this.driver.close();
             });
         }); 
     }
@@ -1371,12 +1416,14 @@ export class AutomatedBrowserManager {
     
     /**
      * Disconnect and close the browser
+     *
+     * @return A promise which will end correctly if the process finishes ok or fail with exception otherwise.
      */
     quit(){
         
         if(this.driver !== null){
             
-            this.driver.quit();
+            return this.driver.quit();
         }
     }
 }

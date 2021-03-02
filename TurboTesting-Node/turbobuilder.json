@@ -59,10 +59,12 @@
     "release": {
     },
     
-    "test": [
-        {
-            "type": "jasmine",
-            "jasmineConfig": "src/test/js/jasmine.json"
-        }
-    ]
+    "test": {
+        "enabledTests": [
+            {
+                "type": "jasmine",
+                "jasmineConfig": "src/test/js/jasmine.json"
+            }
+        ]
+    }
 }
