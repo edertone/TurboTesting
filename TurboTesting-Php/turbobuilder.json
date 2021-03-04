@@ -3,7 +3,7 @@
     "metadata": {
         "name": "turbotesting-php",
         "description": "General purpose cross-language library to improve automated testing productivity",
-        "builderVersion": "4.0.0"
+        "builderVersion": "6.0.0"
     },
     "validate": {
         "runBeforeBuild": true,
@@ -49,12 +49,14 @@
     },
     "release": {
     },
-    "test": [
-        {
-            "type": "phpUnit",
-            "testsRoot": "src/test",
-            "coverageReport": true,
-            "coverageReportOpenAfterTests": true
-        }
-    ]
+    "test": {
+        "enabledTests": [
+            {
+                "type": "phpUnit",
+                "testsRoot": "src/test",
+                "coverageReport": true,
+                "coverageReportOpenAfterTests": true
+            }
+        ]
+    }
 }

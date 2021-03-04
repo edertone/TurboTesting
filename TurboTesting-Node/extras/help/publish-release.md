@@ -2,7 +2,7 @@
 
 1 - Update project dependencies by following instructions on upgrade-dependencies.md
 
-2 - Make sure all tests pass (tb -cbt)
+2 - Make sure all tests pass
 
 3 - Review git changelog to decide the new version value based on the GIT changes: minor, major, ...
     
@@ -24,3 +24,12 @@
     npm publish
    
 11 - Verify that new version appears for the package at www.npmjs.com/~edertone
+
+12 - Get the downloadable zip files for each target and update the files inside with the new versions
+    - docs, readme, compiled code, etc..
+
+13 - Upload the new zip version to turbodepot website for direct download
+    - review that zip download works as expected
+
+14 - Upload the new generated docs to the turbotesting website
+    - review that links to docs still work
