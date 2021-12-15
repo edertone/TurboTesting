@@ -99,6 +99,20 @@ describe('HTTPTestsManagerTest', function() {
     });
     
     
+    it('should generate assert exceptions for the assertUrlsFail method when a list of valid string urls (after replacing the wildcards) are passed', function(done) {
+
+        this.sut.isAssertExceptionsEnabled = false;
+        this.sut.wildcards = { $host: 'www.google.com' };
+        
+        this.sut.assertUrlsFail(['https://$host'], (assertErrors) => {
+            
+            expect(assertErrors.length).toBe(1);
+            expect(assertErrors[0]).toContain("URL expected to fail but was 200 ok: https://www.google.com");
+            done();
+        });
+    });
+    
+    
     it('should generate assert exceptions for the assertUrlsFail method when a list of objects containing valid urls are passed', function(done) {
 
         this.sut.isAssertExceptionsEnabled = false;

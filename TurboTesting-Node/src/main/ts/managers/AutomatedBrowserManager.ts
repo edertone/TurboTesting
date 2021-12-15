@@ -148,7 +148,6 @@ export class AutomatedBrowserManager {
     constructor() {
         
         this.httpTestsManager.isAssertExceptionsEnabled = false;
-        this.httpTestsManager.wildcards = this.wildcards;
             
         this.nodeFs = require('fs');
         this.nodeUrl = require('url');
@@ -810,6 +809,8 @@ export class AutomatedBrowserManager {
      */
     assertUrlsFail(urls: string[]){
     
+        this.httpTestsManager.wildcards = this.wildcards;
+        
         return new Promise ((resolve:any, reject:any) => {
             
             try{

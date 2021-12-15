@@ -9,4 +9,4 @@
  * CopyRight : -> Copyright 2015 Edertone Advanded Solutions (08211 Castellar del Vallès, Barcelona). http://www.edertone.com
  */
 
-jasmine.DEFAULT_TIMEOUT_INTERVAL = 25000;
+jasmine.DEFAULT_TIMEOUT_INTERVAL = 45000;

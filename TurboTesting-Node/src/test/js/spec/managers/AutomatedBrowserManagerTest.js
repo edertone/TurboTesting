@@ -26,8 +26,11 @@ describe('AutomatedBrowserManagerTest', function() {
     
     beforeEach(async function() {
         
+        this.automatedBrowserManager.wildcards = {};
         this.automatedBrowserManager.waitTimeout = 20000;
         this.automatedBrowserManager.ignoreConsoleErrors = [];
+        
+        this.automatedBrowserManager.setBrowserSizeAndPosition(1024, 768, 0, 0);
     });
 
     
@@ -453,6 +456,18 @@ describe('AutomatedBrowserManagerTest', function() {
         this.automatedBrowserManager.wildcards = {$projectRoot: projectRoot};
         
         await expectAsync(this.automatedBrowserManager.assertUrlsFail(['https://github.com/edertone/TurboTesting/blob/master/README.md']))
+            .toBeRejectedWithError(/URL expected to fail but was 200 ok[\s\S]*github.com.edertone/);
+    });
+    
+    
+    it('should fail assertion for the assertUrlsFail method when receiving valid urls (after replacing the wildcards)', async function() {
+        
+        this.automatedBrowserManager.wildcards = {
+            $projectRoot: projectRoot,
+            $host: 'github.com'
+        };
+        
+        await expectAsync(this.automatedBrowserManager.assertUrlsFail(['https://$host/edertone/TurboTesting/blob/master/README.md']))
             .toBeRejectedWithError(/URL expected to fail but was 200 ok[\s\S]*github.com.edertone/);
     });
     
