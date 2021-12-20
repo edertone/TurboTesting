@@ -153,7 +153,6 @@ export class AutomatedBrowserManager {
         this.nodeUrl = require('url');
         this.nodeExecSync = require('child_process').execSync;
         this.webdriver = require('selenium-webdriver');
-        this.chrome = require('selenium-webdriver/chrome');
     }
     
     
@@ -179,6 +178,8 @@ export class AutomatedBrowserManager {
             
             throw new Error("Error: Could not initialize selenium chromedriver. Please make sure it is available on your OS cmd path");
         }
+        
+        this.chrome = require('selenium-webdriver/chrome');
         
         let chromeOptions = new this.chrome.Options();
         let chromeCapabilities = this.webdriver.Capabilities.chrome();
