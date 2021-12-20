@@ -13,6 +13,9 @@
 const path = require('path');
 const projectRoot = path.resolve('./');
 const { AutomatedBrowserManager } = require(projectRoot + '/target/turbotesting-node/dist/ts/index');
+const { FilesManager } = require('turbodepot-node');
+
+const fm = new FilesManager();
 
 
 describe('AutomatedBrowserManagerTest', function() {
@@ -30,7 +33,7 @@ describe('AutomatedBrowserManagerTest', function() {
         this.automatedBrowserManager.waitTimeout = 20000;
         this.automatedBrowserManager.ignoreConsoleErrors = [];
         
-        this.automatedBrowserManager.setBrowserSizeAndPosition(1024, 768, 0, 0);
+        await this.automatedBrowserManager.setBrowserSizeAndPosition(1024, 768, 0, 0);
     });
 
     
@@ -61,6 +64,22 @@ describe('AutomatedBrowserManagerTest', function() {
             .toBeRejectedWithError(/.y. must be a number/);
                 
         await expectAsync(this.automatedBrowserManager.setBrowserSizeAndPosition(500, 100, 100, 100)).toBeResolved();
+    });
+    
+    
+    it('should correctly resize the browser internal viewport when calling setBrowserSizeAndPosition', async function() {
+   
+        await this.automatedBrowserManager.queryCalls([
+            ['assertBrowserState', { viewportSize: '1024x768' }],
+            ['setBrowserSizeAndPosition', 800, 600, 0, 0],
+            ['assertBrowserState', { viewportSize: '800x600' }],
+            ['setBrowserSizeAndPosition', 500, 400, 0, 0],
+            ['assertBrowserState', { viewportSize: '500x400' }],
+            ['setBrowserSizeAndPosition', 600, 600, 0, 0],
+            ['assertBrowserState', { viewportSize: '600x600' }],
+            ['setBrowserSizeAndPosition', 800, 100, 0, 0],
+            ['assertBrowserState', { viewportSize: '800x100' }]
+        ]);
     });
     
     
@@ -277,6 +296,17 @@ describe('AutomatedBrowserManagerTest', function() {
         
             return this.automatedBrowserManager.assertBrowserState({ tabsCount: 1 }); 
         });
+    });
+    
+    
+    it('should correctly execute the assertBrowserState method when checking for the viewport size', async function() {
+        
+        this.automatedBrowserManager.wildcards = {$projectRoot: projectRoot};
+        
+        await this.automatedBrowserManager.queryCalls([
+            ['loadUrl', '$projectRoot/src/test/resources/managers/automatedBrowserManager/basic-html/basic.html'],
+            ['assertBrowserState', { viewportSize: '1024x768' }]
+        ]);
     });
     
     
@@ -710,43 +740,72 @@ describe('AutomatedBrowserManagerTest', function() {
     });
     
     
-    it('should throw exception when passing an invalid snapshot path to the assertSnapshot method', function() {
+    it('should throw exception when passing an invalid snapShotPath to the assertSnapshot method', function() {
     
-        expect(() => {this.automatedBrowserManager.assertSnapshot(projectRoot + 'asdfasdfas', [], 100, () => {})})
-            .toThrowError(Error, /Snapshot path must be to a PNG file.*asdfasdfas/);
+        expect(() => {this.automatedBrowserManager.assertSnapshot(projectRoot + 'asdfasdfas', '', {})})
+            .toThrowError(Error, /Snapshot path must be to a PNG file[\s\S]*asdfasdfas/);
             
-        expect(() => {this.automatedBrowserManager.assertSnapshot(projectRoot + 'asdfasdfas/dfasdfasdfasdfa.png', [], 100, () => {})})
-            .toThrowError(Error, /Cannot save snapshot to non existant path.*dfasdfasdfasdfa/);
+        expect(() => {this.automatedBrowserManager.assertSnapshot(projectRoot + 'asdfasdfas/dfasdfasdfasdfa.png', '', {})})
+            .toThrowError(Error, /Cannot save snapshot to non existant path[\s\S]*dfasdfasdfasdfa/);
     });
     
     
+    it('should throw exception when passing invalid failureSnapShotsPath to the assertSnapshot method', function() {
+    
+        let correctPath = projectRoot + '/src/test/resources/managers/automatedBrowserManager/snapshots/basic-with-input-disabled-snapshot-800x600.png';
+    
+        expect(() => {this.automatedBrowserManager.assertSnapshot(correctPath, null, {})})
+            .toThrowError(Error, /failureSnapShotsPath must be a string/);
+            
+        expect(() => {this.automatedBrowserManager.assertSnapshot(correctPath, projectRoot + 'asdfasdfas', {})})
+            .toThrowError(Error, /Specified an invalid path for failureSnapShotsPath[\s\S]*asdfasdfas/);
+    });
+    
+
     it('should correctly execute the assertSnapshot method with a snapshot that already exists', async function() {
     
         await this.automatedBrowserManager.queryCalls([
             ['setBrowserSizeAndPosition', 800, 600, 0, 0],
             ['loadUrl', projectRoot + '/src/test/resources/managers/automatedBrowserManager/basic-html/basic-with-input-disabled.html'],
-            ['assertSnapshot', projectRoot + '/src/test/resources/managers/automatedBrowserManager/snapshots/basic-with-input-disabled-snapshot-800x600.png', {}]
+            ['assertSnapshot', projectRoot + '/src/test/resources/managers/automatedBrowserManager/snapshots/basic-with-input-disabled-snapshot-800x600.png', fm.getOSTempDirectory(), {}]
         ]);
     });
     
     
     it('should fail assertion when calling the assertSnapshot method with an existing snapshot and a different browser window size', async function() {
-    
+
         await expectAsync(this.automatedBrowserManager.queryCalls([
             ['setBrowserSizeAndPosition', 1000, 600, 0, 0],
             ['loadUrl', projectRoot + '/src/test/resources/managers/automatedBrowserManager/basic-html/basic-with-input-disabled.html'],
-            ['assertSnapshot', projectRoot + '/src/test/resources/managers/automatedBrowserManager/snapshots/basic-with-input-disabled-snapshot-800x600.png', {}]
-        ])).toBeRejectedWithError(/Snapshot size mismatch: Expected 800x600px, but received 1000x600px/);
+            ['assertSnapshot', projectRoot + '/src/test/resources/managers/automatedBrowserManager/snapshots/basic-with-input-disabled-snapshot-800x600.png', fm.getOSTempDirectory(), {}]
+        ])).toBeRejectedWithError(/Snapshot size mismatch: Expected 800x600px, but received 1000x600px[\s\S]*Please make sure your snapshot has the same exact s/);
     });
     
     
     it('should fail assertion when calling the assertSnapshot method with an existing snapshot and different browser contents', async function() {
     
+        // Clean failure files if generated by previous executions
+        if(fm.isFile(fm.getOSTempDirectory() + fm.dirSep() + 'basic-with-input-disabled-snapshot-800x600-failedSnapshot.png')){
+            
+            fm.deleteFile(fm.getOSTempDirectory() + fm.dirSep() + 'basic-with-input-disabled-snapshot-800x600-failedSnapshot.png');
+        }
+        
+        if(fm.isFile(fm.getOSTempDirectory() + fm.dirSep() + 'basic-with-input-disabled-snapshot-800x600-failedSnapshotDiff.png')){
+            
+            fm.deleteFile(fm.getOSTempDirectory() + fm.dirSep() + 'basic-with-input-disabled-snapshot-800x600-failedSnapshotDiff.png');
+        }
+        
         await expectAsync(this.automatedBrowserManager.queryCalls([
             ['setBrowserSizeAndPosition', 800, 600, 0, 0],
             ['loadUrl', projectRoot + '/src/test/resources/managers/automatedBrowserManager/basic-html/basic.html'],
-            ['assertSnapshot', projectRoot + '/src/test/resources/managers/automatedBrowserManager/snapshots/basic-with-input-disabled-snapshot-800x600.png', {}]
-        ])).toBeRejectedWithError(/Snapshot mismatch: Allowed 0 different pixels, but found ..../);
+            ['assertSnapshot', projectRoot + '/src/test/resources/managers/automatedBrowserManager/snapshots/basic-with-input-disabled-snapshot-800x600.png', fm.getOSTempDirectory(), {}]
+        ])).toBeRejectedWithError(/Snapshot mismatch: Allowed 0 different pixels, but found ....[\s\S]*Saved new snapshot/);
+        
+        
+        // Make sure the expected failure images exist
+        expect(fm.isFile(fm.getOSTempDirectory() + fm.dirSep() + 'basic-with-input-disabled-snapshot-800x600.png')).toBe(false);
+        expect(fm.isFile(fm.getOSTempDirectory() + fm.dirSep() + 'basic-with-input-disabled-snapshot-800x600-failedSnapshot.png')).toBe(true);
+        expect(fm.isFile(fm.getOSTempDirectory() + fm.dirSep() + 'basic-with-input-disabled-snapshot-800x600-failedSnapshotDiff.png')).toBe(true);
     });
     
     

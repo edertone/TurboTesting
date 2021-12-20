@@ -222,7 +222,7 @@ export class AutomatedBrowserManager {
     
     
     /**
-     * Specify the viewport size and the main browser window position. This method can be called at any time
+     * Specify the viewport (internal browser document area) size and the main browser window position. This method can be called at any time
      *
      * @param width The desired browser viewport width. (Note this is the internal area where the website is displayed)
      * @param height The desired browser viewport height. (Note this is the internal area where the website is displayed)
@@ -236,7 +236,14 @@ export class AutomatedBrowserManager {
         return this.driver.executeScript(`return [window.outerWidth - window.innerWidth + ${width}, window.outerHeight - window.innerHeight + ${height}];`)
             .then((viewportSize: any) =>{
         
-            return this.driver.manage().window().setRect({width: viewportSize[0], height: viewportSize[1], x: x, y: y});
+            return this.driver.manage().window().setRect({width: viewportSize[0], height: viewportSize[1], x: x, y: y}).then(() =>{
+                
+                // We must wait till the browser window is correctly resized before letting the execution continue
+                return this.waitTillJavaScriptCondition(`window.innerWidth === ${width} && window.innerHeight === ${height}`).then().catch((e:Error) => {
+                    
+                    throw new Error(`Error trying to set browser viewport size to: ${width}x${height}\n` + e.toString());
+                });
+            });
         });
     }
     
@@ -308,6 +315,29 @@ export class AutomatedBrowserManager {
         }, this.waitTimeout).then().catch((e:Error) => {
             
             throw new Error('Error waiting for browser ready: ' + e.toString());
+        });
+    }
+    
+    
+    /**
+     * Wait till the specified javascript condition is evaluated as true, or fail after the class waitTimeout value is reached
+     *
+     * @param condition A javascript expression to evaluate, like for example: 'document.readyState === "complete"'
+     *
+     * @return A promise which will end correctly if the process finishes ok or fail with exception otherwise.
+     */
+    waitTillJavaScriptCondition(condition:string){
+        
+        return this.driver.wait(() => {
+            
+            return this.driver.executeScript('return ' + condition).then((condition: any) => {
+                
+                return condition === true;
+            });
+            
+        }, this.waitTimeout).then().catch((e:Error) => {
+            
+            throw new Error('Error waiting for javascript condition to be true:\n' + condition + '\n' + e.toString());
         });
     }
     
@@ -395,6 +425,7 @@ export class AutomatedBrowserManager {
      *        "loadedHtmlRegExp" A regular expression that will be evaluated against the html code that is loaded (and maybe altered) by the browser and must match.<br>
      *        "loadedHtmlNotContains" A string or an array of strings with texts tat must NOT exist on the html code that is loaded (and maybe altered) by the browser
      *        "tabsCount" A number specifiyng how many tabs must currently exist on the browser
+     *        "viewportSize" A string in the form NNNxNNN that defines a window dimensions that must match the browser internal document window excluding the OS window frame. Example: 1024x768
      *        
      * @return A promise which will end correctly if the process finishes ok or fail with exception otherwise.
      */
@@ -410,7 +441,7 @@ export class AutomatedBrowserManager {
             this.objectTestsManager.assertObjectProperties(asserts,
                     ['url', 'titleContains', 'ignoreConsoleErrors', 'sourceHtmlContains', 'sourceHtmlRegExp', 'sourceHtmlStartsWith',
                     'sourceHtmlEndsWith', 'sourceHtmlNotContains', 'loadedHtmlStartsWith', 'loadedHtmlEndsWith', 'loadedHtmlContains',
-                    'loadedHtmlRegExp', 'loadedHtmlNotContains', 'tabsCount'], false);
+                    'loadedHtmlRegExp', 'loadedHtmlNotContains', 'tabsCount', 'viewportSize'], false);
                  
         } catch (e) {
         
@@ -511,83 +542,107 @@ export class AutomatedBrowserManager {
                                     asserts.hasOwnProperty('loadedHtmlContains') ? asserts.loadedHtmlContains : null,
                                     asserts.hasOwnProperty('loadedHtmlRegExp') ? asserts.loadedHtmlRegExp : null);
                             
-                            return this.driver.getAllWindowHandles().then((windowHandles: any) => {
-                            
-                                // An auxiliary method to perform the final errors test
-                                let finish = () => {
+                             return this.driver.executeScript(`return [window.innerWidth, window.innerHeight];`).then((viewportSize: any) =>{
+        
+                                if(asserts.hasOwnProperty('viewportSize') && asserts.viewportSize !== viewportSize.join('x')){
                                     
-                                    if(anyErrors.length > 0){
+                                    anyErrors.push('Viewport actual size (' + viewportSize.join('x') + ') expected to be: ' + asserts.viewportSize);
+                                }
+                            
+                                return this.driver.getAllWindowHandles().then((windowHandles: any) => {
+                                
+                                    // An auxiliary method to perform the final errors test
+                                    let finish = () => {
                                         
-                                        throw new Error(`AutomatedBrowserManager.assertBrowserState failed with ${anyErrors.length} errors:\n` + anyErrors.join('\n'));
+                                        if(anyErrors.length > 0){
+                                            
+                                            throw new Error(`AutomatedBrowserManager.assertBrowserState failed with ${anyErrors.length} errors:\n` + anyErrors.join('\n'));
+                                        }
                                     }
-                                }
-                                
-                                // If tabsCount is specified, check that the browser tabs number matches it   
-                                if(asserts.hasOwnProperty('tabsCount') && asserts.tabsCount !== windowHandles.length){
                                     
-                                    anyErrors.push('Browser tabs count (' + windowHandles.length + ') must be: ' + asserts.tabsCount);
-                                }
-                            
-                                // In case none of the real source code assertions have been defined, we will finish here, to avoid performing an unnecessary
-                                // http request to obtain the real source code.
-                                if((!asserts.hasOwnProperty('sourceHtmlStartsWith') || asserts.sourceHtmlStartsWith === null) &&
-                                   (!asserts.hasOwnProperty('sourceHtmlEndsWith') || asserts.sourceHtmlEndsWith === null) &&
-                                   (!asserts.hasOwnProperty('sourceHtmlNotContains') || asserts.sourceHtmlNotContains === null) &&
-                                   (!asserts.hasOwnProperty('sourceHtmlContains') || asserts.sourceHtmlContains === null) &&
-                                   (!asserts.hasOwnProperty('sourceHtmlRegExp') || asserts.sourceHtmlRegExp === null)){
-                                    
-                                    return finish();
-                                }
-                                
-                                // If the url to test belongs to a local file, we will directly get the source code from there.
-                                let urlLocalFileContents = '';
-                                    
-                                try {
-                                    
-                                    urlLocalFileContents = this.nodeFs.readFileSync(this.nodeUrl.fileURLToPath(browserUrl), "utf8");
-    
-                                } catch (e) {}
-    
-                                if(urlLocalFileContents !== ''){
-    
-                                    this._validateHtml(anyErrors, urlLocalFileContents, browserUrl,
-                                            asserts.hasOwnProperty('sourceHtmlStartsWith') ? asserts.sourceHtmlStartsWith : null,
-                                            asserts.hasOwnProperty('sourceHtmlEndsWith') ? asserts.sourceHtmlEndsWith : null,
-                                            asserts.hasOwnProperty('sourceHtmlNotContains') ? asserts.sourceHtmlNotContains : null,
-                                            asserts.hasOwnProperty('sourceHtmlContains') ? asserts.sourceHtmlContains : null,
-                                            asserts.hasOwnProperty('sourceHtmlRegExp') ? asserts.sourceHtmlRegExp : null);
-                                    
-                                    return finish();
-                                }
-                                
-                                // Perform an http request to get the url real code. This code may be different from the one that is found at the 
-                                // browser level, cause the browser or any javascript dynamic process may alter it.
-                                return new Promise ((resolve:any, reject:any) => {
-                                
-                                    try{
-                                    
-                                        let request = new HTTPManagerGetRequest(browserUrl);
+                                    // If tabsCount is specified, check that the browser tabs number matches it   
+                                    if(asserts.hasOwnProperty('tabsCount') && asserts.tabsCount !== windowHandles.length){
                                         
-                                        request.errorCallback = (errorMsg: string, errorCode: number) => {
+                                        anyErrors.push('Browser tabs count (' + windowHandles.length + ') must be: ' + asserts.tabsCount);
+                                    }
+                                
+                                    // In case none of the real source code assertions have been defined, we will finish here, to avoid performing an unnecessary
+                                    // http request to obtain the real source code.
+                                    if((!asserts.hasOwnProperty('sourceHtmlStartsWith') || asserts.sourceHtmlStartsWith === null) &&
+                                       (!asserts.hasOwnProperty('sourceHtmlEndsWith') || asserts.sourceHtmlEndsWith === null) &&
+                                       (!asserts.hasOwnProperty('sourceHtmlNotContains') || asserts.sourceHtmlNotContains === null) &&
+                                       (!asserts.hasOwnProperty('sourceHtmlContains') || asserts.sourceHtmlContains === null) &&
+                                       (!asserts.hasOwnProperty('sourceHtmlRegExp') || asserts.sourceHtmlRegExp === null)){
                                         
-                                            anyErrors.push('Could not load url: ' + browserUrl + '\nError code: ' + errorCode + '\n' + errorMsg);
-                                        };
+                                        return finish();
+                                    }
+                                    
+                                    // If the url to test belongs to a local file, we will directly get the source code from there.
+                                    let urlLocalFileContents = '';
                                         
-                                        request.successCallback = (html: any) => {
-                                           
-                                            this._validateHtml(anyErrors, html, browserUrl,
+                                    try {
+                                        
+                                        urlLocalFileContents = this.nodeFs.readFileSync(this.nodeUrl.fileURLToPath(browserUrl), "utf8");
+        
+                                    } catch (e) {}
+        
+                                    if(urlLocalFileContents !== ''){
+        
+                                        this._validateHtml(anyErrors, urlLocalFileContents, browserUrl,
                                                 asserts.hasOwnProperty('sourceHtmlStartsWith') ? asserts.sourceHtmlStartsWith : null,
                                                 asserts.hasOwnProperty('sourceHtmlEndsWith') ? asserts.sourceHtmlEndsWith : null,
                                                 asserts.hasOwnProperty('sourceHtmlNotContains') ? asserts.sourceHtmlNotContains : null,
                                                 asserts.hasOwnProperty('sourceHtmlContains') ? asserts.sourceHtmlContains : null,
                                                 asserts.hasOwnProperty('sourceHtmlRegExp') ? asserts.sourceHtmlRegExp : null);
-                                         };
-        
-                                        // Once the request to get the real browser code is done, we will check if any error has happened
-                                        request.finallyCallback = () => {
+                                        
+                                        return finish();
+                                    }
+                                    
+                                    // Perform an http request to get the url real code. This code may be different from the one that is found at the 
+                                    // browser level, cause the browser or any javascript dynamic process may alter it.
+                                    return new Promise ((resolve:any, reject:any) => {
+                                    
+                                        try{
+                                        
+                                            let request = new HTTPManagerGetRequest(browserUrl);
+                                            
+                                            request.errorCallback = (errorMsg: string, errorCode: number) => {
+                                            
+                                                anyErrors.push('Could not load url: ' + browserUrl + '\nError code: ' + errorCode + '\n' + errorMsg);
+                                            };
+                                            
+                                            request.successCallback = (html: any) => {
+                                               
+                                                this._validateHtml(anyErrors, html, browserUrl,
+                                                    asserts.hasOwnProperty('sourceHtmlStartsWith') ? asserts.sourceHtmlStartsWith : null,
+                                                    asserts.hasOwnProperty('sourceHtmlEndsWith') ? asserts.sourceHtmlEndsWith : null,
+                                                    asserts.hasOwnProperty('sourceHtmlNotContains') ? asserts.sourceHtmlNotContains : null,
+                                                    asserts.hasOwnProperty('sourceHtmlContains') ? asserts.sourceHtmlContains : null,
+                                                    asserts.hasOwnProperty('sourceHtmlRegExp') ? asserts.sourceHtmlRegExp : null);
+                                             };
+            
+                                            // Once the request to get the real browser code is done, we will check if any error has happened
+                                            request.finallyCallback = () => {
+                                                
+                                                try{
+                                                    
+                                                    finish();
+                                                    resolve();
+                                                    
+                                                } catch (e) {
+            
+                                                    reject(e);
+                                                }
+                                            }
+                                            
+                                            this.httpManager.execute(request);    
+                                            
+                                        } catch (e) {
+            
+                                            anyErrors.push('Error performing http request to '+ browserUrl + '\n' + e.toString());
                                             
                                             try{
-                                                
+                                                    
                                                 finish();
                                                 resolve();
                                                 
@@ -596,23 +651,7 @@ export class AutomatedBrowserManager {
                                                 reject(e);
                                             }
                                         }
-                                        
-                                        this.httpManager.execute(request);    
-                                        
-                                    } catch (e) {
-        
-                                        anyErrors.push('Error performing http request to '+ browserUrl + '\n' + e.toString());
-                                        
-                                        try{
-                                                
-                                            finish();
-                                            resolve();
-                                            
-                                        } catch (e) {
-    
-                                            reject(e);
-                                        }
-                                    }
+                                    });
                                 });
                             });
                         });
@@ -1018,10 +1057,16 @@ export class AutomatedBrowserManager {
     
     
     /**
-     * Test that the current document visible area matches a previously stored snapshot. First time the snapshot will be stored if not exist, and then always compared with
-     * the contents of the browser viewport. Specific regions of the snapshot can be ignored if necessary, and comparison sensitivity can be also specified.
+     * Test that the current document visible area matches a previously stored snapshot.
+     * If no snapshot still exists, it will be created the first time and test will pass. If it exist, it will be compared with the contents of the browser viewport.
+     * Specific regions of the snapshot can be ignored if necessary, and comparison sensitivity can be also specified.
+     *
+     * If the test fails, a new snapshot will be created with the current browser visible area so we can reuse it in case we think it is now the actual valid one.
      * 
      * @param snapShotPath Full file system path to the snapshot that must be used to compare with the browser. First time will be created if not exists
+     * @param failureSnapShotsPath Full file system path to a folder where two snapshots will be saved if the test fails (Set an empty string to use the same folder as snapShotPath):
+     *        - One snapshot will be the snapshot as it is currently visible on the actual browser contents. This one can be reused if necessary
+     *        - The other snapshot will show the pixel difference between the currently visible document area and the previously expected 
      * @param options Parameters to modify the assert behaviour:
      *        - maxDifferentPixels: (default 0) Allowed number of pixels that are allowed to be different between the saved snapshot and the browser viewport contents
      *        - tolerance: (default 0.1) A value between 0 and 1 which defines the threshold to define that a pixel is different or not. 0 means stricter image comparison
@@ -1029,11 +1074,38 @@ export class AutomatedBrowserManager {
      *
      * @return A promise which will end correctly if the process finishes ok or fail with exception otherwise.
      */
-    assertSnapshot(snapShotPath: string,
+    assertSnapshot(snapShotPath: string, failureSnapShotsPath: string,
                    options: { maxDifferentPixels: number,
                               tolerance: number,
                               ignoreRegions: {x: number, y: number, width: number, height: number}[]
                             }){
+
+        // Validate the snapshot path
+        StringUtils.forceNonEmptyString(snapShotPath, 'snapShotPath');
+        
+        // Test that specified path is a png file and the parent folder exists
+        if(StringUtils.getPathExtension(snapShotPath).toLowerCase() !== 'png'){
+            
+            throw new Error('Snapshot path must be to a PNG file:\n' + snapShotPath);
+        }
+
+        if(!this.filesManager.isDirectory(StringUtils.getPath(snapShotPath))){
+            
+            throw new Error('Cannot save snapshot to non existant path:\n' + snapShotPath);
+        }
+        
+        // Validate the failure snapshot path
+        StringUtils.forceString(failureSnapShotsPath, 'failureSnapShotsPath');
+        
+        if(StringUtils.isEmpty(failureSnapShotsPath)){
+            
+            failureSnapShotsPath = StringUtils.getPath(snapShotPath);
+        }
+            
+        if(!this.filesManager.isDirectory(failureSnapShotsPath)){
+            
+            throw new Error('Specified an invalid path for failureSnapShotsPath:\n' + failureSnapShotsPath);
+        }
         
         // Init required instances if necessary
         if(this.nodePNG === null){
@@ -1055,17 +1127,6 @@ export class AutomatedBrowserManager {
         options.maxDifferentPixels = options.hasOwnProperty('maxDifferentPixels') ? options.maxDifferentPixels : 0;
         options.tolerance = options.hasOwnProperty('tolerance') ? options.tolerance : 0.1;
         options.ignoreRegions = options.hasOwnProperty('ignoreRegions') ? options.ignoreRegions : [];
-        
-        // Test that specified path is a png file and tha parent folder exists
-        if(StringUtils.getPathExtension(snapShotPath).toLowerCase() !== 'png'){
-            
-            throw new Error('Snapshot path must be to a PNG file: ' + snapShotPath);
-        }
-
-        if(!this.filesManager.isDirectory(StringUtils.getPath(snapShotPath))){
-            
-            throw new Error('Cannot save snapshot to non existant path: ' + snapShotPath);
-        }
         
         return this.waitTillBrowserReady().then(() => {
  
@@ -1089,7 +1150,8 @@ export class AutomatedBrowserManager {
                 // Both snapshots must be the same size
                 if(oldSnapshot.width !== newSnapshot.width || oldSnapshot.height !== newSnapshot.height){
                     
-                    throw new Error(`Snapshot size mismatch: Expected ${oldSnapshot.width}x${oldSnapshot.height}px, but received ${newSnapshot.width}x${newSnapshot.height}px\n${snapShotPath}`);
+                    throw new Error(`Snapshot size mismatch: Expected ${oldSnapshot.width}x${oldSnapshot.height}px, but received ${newSnapshot.width}x${newSnapshot.height}px\n${snapShotPath}\n` +
+                    'Please make sure your snapshot has the same exact size as the browser window that is being tested');
                 }
                 
                 // Paint in black on both snapshots the specified ignore regions so they do not count for the comparison
@@ -1130,12 +1192,14 @@ export class AutomatedBrowserManager {
                 // Test diferent pixels are as expected
                 if(options.maxDifferentPixels < differentPixels){
                     
-                    // Save the new snapshot and the diff image at the same place where the old one is found
-                    let failSnapshotPath = StringUtils.getPath(snapShotPath) + '/' + StringUtils.getPathElementWithoutExt(snapShotPath);
-                    this.filesManager.saveFile(failSnapshotPath + '-failedSnapshot.png', this.nodePNG.sync.write(newSnapshot));
-                    this.filesManager.saveFile(failSnapshotPath + '-failedSnapshotDiff.png', this.nodePNG.sync.write(diffSnapshot));
+                    // Save the new failure snapshot and the diff image at the same place where the old one is found
+                    let failSnapshotFullPath = failureSnapShotsPath + this.filesManager.dirSep() + StringUtils.getPathElementWithoutExt(snapShotPath);
+                    
+                    this.filesManager.saveFile(failSnapshotFullPath + '-failedSnapshot.png', this.nodePNG.sync.write(newSnapshot));
+                    this.filesManager.saveFile(failSnapshotFullPath + '-failedSnapshotDiff.png', this.nodePNG.sync.write(diffSnapshot));
 
-                    throw new Error(`Snapshot mismatch: Allowed ${options.maxDifferentPixels} different pixels, but found ${differentPixels}\n${snapShotPath}\nSaved new snapshot with ignored regions painted in black and diff file to:\n${StringUtils.getPath(snapShotPath)}\n`);
+                    throw new Error(`Snapshot mismatch: Allowed ${options.maxDifferentPixels} different pixels, but found ${differentPixels}\n${snapShotPath}\n` +
+                        `Saved new snapshot (ignored regions painted in black) and diff file to:\n${failureSnapShotsPath}\nPlease use that snapshot if you think is correct now`);
                 };
             });
         });
