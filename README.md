@@ -6,13 +6,13 @@ It is a library that uses the same methods and classes across all the implemente
 
 ### Documentation
 
-**A detailed code specification is available online. You can check it [here](https://turbotesting.org)**
+**A detailed code specification is available online. You can check it [here](https://turboframework.org/en/libs/turbotesting)**
 
 ### How to use it
 
 - Php:
 ```
-Currently available only as a .phar file (download it from https://turbotesting.org)
+Currently available only as a .phar file (download it from https://turboframework.org)
 require '..../turbotesting-php-X.X.X.phar';
 use org\turbotesting\src\main\php\utils\AssertUtils;
 $n = AssertUtils::throwsException(function() { someMethodThatFails(); }, '/assert exception message/');
@@ -40,7 +40,7 @@ We want to increase this list. So! if you want to translate the library to your 
 
 ### Dependencies
 
-This library requires the latest [turbocommons](https://turbocommons.org) and [turbodepot](https://turbodepot.org) library versions
+This library requires the latest [turbocommons](https://turboframework.org/en/libs/turbocommons) and [turbodepot](https://turboframework.org/en/libs/turbodepot) library versions
 
 ### Contribute
 
@@ -48,8 +48,8 @@ Turbo Testing is 100% free and open source, but we will be really pleased to rec
 
 - You can get more info at the official site:
 
-	- [turbotesting.org](https://turbotesting.org)
+	- [turbotesting.org](https://turboframework.org/en/libs/turbotesting)
 
 ### Donate
 	
-[![Donate](https://turbocommons.org/view/views/home/donate-button.png)](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=53MJ6SY66WZZ2&lc=ES&item_name=TurboTesting&no_note=0&cn=A%c3%b1adir%20instrucciones%20especiales%20para%20el%20vendedor%3a&no_shipping=2&currency_code=EUR&bn=PP%2dDonationsBF%3abtn_donateCC_LG%2egif%3aNonHosted)
+[![Donate](https://turboframework.org/view/views/home/donate-button.png)](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=53MJ6SY66WZZ2&lc=ES&item_name=TurboTesting&no_note=0&cn=A%c3%b1adir%20instrucciones%20especiales%20para%20el%20vendedor%3a&no_shipping=2&currency_code=EUR&bn=PP%2dDonationsBF%3abtn_donateCC_LG%2egif%3aNonHosted)
