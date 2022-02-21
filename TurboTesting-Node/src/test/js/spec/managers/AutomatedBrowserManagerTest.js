@@ -70,6 +70,7 @@ describe('AutomatedBrowserManagerTest', function() {
     it('should correctly resize the browser internal viewport when calling setBrowserSizeAndPosition', async function() {
    
         await this.automatedBrowserManager.queryCalls([
+            ['loadUrl', projectRoot + '/src/test/resources/managers/automatedBrowserManager/basic-html/basic.html'],
             ['assertBrowserState', { viewportSize: '1024x768' }],
             ['setBrowserSizeAndPosition', 800, 600, 0, 0],
             ['assertBrowserState', { viewportSize: '800x600' }],
@@ -433,11 +434,11 @@ describe('AutomatedBrowserManagerTest', function() {
         
         // To perform this test we are using the github readme file url that should not change ever
         await this.automatedBrowserManager.assertUrlsLoadOk([{
-            url: "https://github.com/edertone/TurboTesting/blob/master/README.md",
-            titleContains: "TurboTesting/README.md",
+            url: "https://turboframework.org/en",
+            titleContains: "framework",
             loadedHtmlContains: '<head>',
             loadedHtmlNotContains: 'nottocontaintextstring',
-            sourceHtmlContains: ['<!DOCTYPE html>', '<head>'],
+            sourceHtmlContains: ['<!doctype html>', '<head>'],
             sourceHtmlNotContains: 'nottocontaintextstring'                    
         }]);
     });

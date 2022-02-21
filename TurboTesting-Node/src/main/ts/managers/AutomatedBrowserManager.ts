@@ -242,7 +242,10 @@ export class AutomatedBrowserManager {
                 // We must wait till the browser window is correctly resized before letting the execution continue
                 return this.waitTillJavaScriptCondition(`window.innerWidth === ${width} && window.innerHeight === ${height}`).then().catch((e:Error) => {
                     
-                    throw new Error(`Error trying to set browser viewport size to: ${width}x${height}\n` + e.toString());
+                    return this.driver.executeScript('return window.innerWidth + "x" + window.innerHeight').then((realSize:string) =>{
+                    
+                        throw new Error(`Error trying to set browser viewport size to: ${width}x${height} (it was ${realSize})\n` + e.toString());    
+                    });
                 });
             });
         });

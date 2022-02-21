@@ -117,10 +117,10 @@ describe('HTTPTestsManagerTest', function() {
 
         this.sut.isAssertExceptionsEnabled = false;
         
-        this.sut.assertUrlsFail([{ url: "https://www.github.com" }, { url: "https://www.google.com" }], (assertErrors) => {
+        this.sut.assertUrlsFail([{ url: "https://www.turboframework.org" }, { url: "https://www.google.com" }], (assertErrors) => {
             
             expect(assertErrors.length).toBe(2);
-            expect(assertErrors[0]).toContain("URL expected to fail but was 200 ok: https://www.github.com");
+            expect(assertErrors[0]).toContain("URL expected to fail but was 200 ok: https://www.turboframework.org");
             expect(assertErrors[1]).toContain("URL expected to fail but was 200 ok: https://www.google.com");
             
             done();
@@ -132,10 +132,10 @@ describe('HTTPTestsManagerTest', function() {
 
         this.sut.isAssertExceptionsEnabled = false;
         
-        this.sut.assertUrlsFail([{ url: "https://www.github.com" }, 'https://www.stackoverflow.com', { url: "https://www.google.com" }], (assertErrors) => {
+        this.sut.assertUrlsFail([{ url: "https://www.turboframework.org" }, 'https://www.stackoverflow.com', { url: "https://www.google.com" }], (assertErrors) => {
             
             expect(assertErrors.length).toBe(3);
-            expect(assertErrors[0]).toContain("URL expected to fail but was 200 ok: https://www.github.com");
+            expect(assertErrors[0]).toContain("URL expected to fail but was 200 ok: https://www.turboframework.org");
             expect(assertErrors[1]).toContain("URL expected to fail but was 200 ok: https://www.stackoverflow.com");
             expect(assertErrors[2]).toContain("URL expected to fail but was 200 ok: https://www.google.com");
             
