@@ -8,7 +8,7 @@
  */
  
 
-import { ArrayUtils, StringUtils, HTTPManager, HTTPManagerGetRequest } from 'turbocommons-ts';
+import { ArrayUtils, StringUtils, HTTPManager, HTTPManagerGetRequest, ObjectUtils } from 'turbocommons-ts';
 import { HTTPTestsManager } from './HTTPTestsManager';
 import { StringTestsManager } from './StringTestsManager';
 import { ObjectTestsManager } from './ObjectTestsManager';
@@ -745,13 +745,27 @@ export class AutomatedBrowserManager {
      * @return A promise which will end correctly if the process finishes ok or fail with exception otherwise.
      */
     assertUrlsLoadOk(urls: any[]){
-    
+        
+        // Verify the received structures are valid
+        if(!ArrayUtils.isArray(urls) || urls.length <= 0){
+            
+            throw new Error(`urls must be a non empty array`);
+        }
+        
+        for(let url of urls){
+            
+            if(!ObjectUtils.isObject(url) || !url.hasOwnProperty('url')){
+                
+                throw new Error(`invalid urls structure provided. Must be an object with at least the 'url' property`);
+            }
+        }
+                
         let anyErrors: string[] = [];
         
         // Fail if list has duplicate values
         if(ArrayUtils.hasDuplicateElements(urls.map(l => l.url))){
             
-            throw new Error('AutomatedBrowserManager.assertUrlsLoadOk duplicate urls: ' + ArrayUtils.getDuplicateElements(urls.map(l => l.url)).join('\n'));
+            throw new Error('duplicate urls: ' + ArrayUtils.getDuplicateElements(urls.map(l => l.url)).join('\n'));
         }
         
         // Load all the urls on the list and perform a request for each one.
@@ -761,13 +775,14 @@ export class AutomatedBrowserManager {
                 
                 if(anyErrors.length > 0){
                     
-                    throw new Error(`AutomatedBrowserManager.assertUrlsLoadOk failed with ${anyErrors.length} errors:\n` + anyErrors.join('\n'));
+                    throw new Error(`failed with ${anyErrors.length} errors:\n` + anyErrors.join('\n'));
                 }
                 
                 return;
             }
-        
+            
             let entry = urls.shift();
+            
             entry.url = this.stringTestsManager.replaceWildCardsOnText(entry.url, this.wildcards);
             
             return this.loadUrl(entry.url).then(() => {

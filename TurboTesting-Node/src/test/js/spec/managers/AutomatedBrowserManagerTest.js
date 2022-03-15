@@ -370,6 +370,43 @@ describe('AutomatedBrowserManagerTest', function() {
             });    
         });
     });
+    
+    
+    it('should throw an exception when invalid structures are passed to the assertUrlsLoadOk method', async function() {
+        
+        expect(() => {this.automatedBrowserManager.assertUrlsLoadOk([])})
+            .toThrowError(Error, /urls must be a non empty array/);
+       
+        expect(() => {this.automatedBrowserManager.assertUrlsLoadOk(1)})
+            .toThrowError(Error, /urls must be a non empty array/);
+            
+        expect(() => {this.automatedBrowserManager.assertUrlsLoadOk("12456778")})
+            .toThrowError(Error, /urls must be a non empty array/);
+            
+        expect(() => {this.automatedBrowserManager.assertUrlsLoadOk({})})
+            .toThrowError(Error, /urls must be a non empty array/);
+            
+        expect(() => {this.automatedBrowserManager.assertUrlsLoadOk({abc: '111'})})
+            .toThrowError(Error, /urls must be a non empty array/);
+                        
+        expect(() => {this.automatedBrowserManager.assertUrlsLoadOk([1])})
+            .toThrowError(Error, /invalid urls structure provided/);
+            
+        expect(() => {this.automatedBrowserManager.assertUrlsLoadOk(["12456778"])})
+            .toThrowError(Error, /invalid urls structure provided/);
+            
+        expect(() => {this.automatedBrowserManager.assertUrlsLoadOk([1,2,3])})
+            .toThrowError(Error, /invalid urls structure provided/);
+            
+        expect(() => {this.automatedBrowserManager.assertUrlsLoadOk([{}])})
+            .toThrowError(Error, /invalid urls structure provided/);
+            
+        expect(() => {this.automatedBrowserManager.assertUrlsLoadOk([{abc: '111'}])})
+            .toThrowError(Error, /invalid urls structure provided/);
+            
+        expect(() => {this.automatedBrowserManager.assertUrlsLoadOk([{url: 'url1'}, {url: 'url1'}])})
+            .toThrowError(Error, /duplicate urls/);
+    });
 
 
     it('should correctly execute the assertUrlsLoadOk method', async function() {
