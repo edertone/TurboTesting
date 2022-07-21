@@ -469,7 +469,7 @@ describe('AutomatedBrowserManagerTest', function() {
     
     it('should correctly execute the assertUrlsLoadOk method on an internet url with asserts on the original source code', async function() {
         
-        // To perform this test we are using the github readme file url that should not change ever
+        // To perform this test we are using the turboframework url that should not change ever
         await this.automatedBrowserManager.assertUrlsLoadOk([{
             url: "https://turboframework.org/en",
             titleContains: "framework",
