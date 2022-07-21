@@ -234,6 +234,23 @@ export class AutomatedBrowserManager {
      */
     setBrowserSizeAndPosition(width: number, height: number, x = 0, y = 0){
     
+        return this._setBrowserSizeAndPositionAux(width, height, x, y, 5);
+    }
+    
+    
+    /**
+     * Auxiliary method for the setBrowserSizeAndPosition method. It will retry the resizing for a limited number of times before failing
+     * 
+     * @param width Same as setBrowserSizeAndPosition
+     * @param height Same as setBrowserSizeAndPosition
+     * @param x Same as setBrowserSizeAndPosition
+     * @param y Same as setBrowserSizeAndPosition
+     * @param attempts Number of times to retry the browser window resize
+     *
+     * @return Same as setBrowserSizeAndPosition
+     */
+    private _setBrowserSizeAndPositionAux(width: number, height: number, x = 0, y = 0, attempts: number){
+    
         return this.driver.executeScript(`return [window.outerWidth - window.innerWidth + ${width}, window.outerHeight - window.innerHeight + ${height}];`)
             .then((viewportSize: any) =>{
         
@@ -242,10 +259,17 @@ export class AutomatedBrowserManager {
                 // We must wait till the browser window is correctly resized before letting the execution continue
                 return this.waitTillJavaScriptCondition(`window.innerWidth === ${width} && window.innerHeight === ${height}`).then().catch((e:Error) => {
                     
-                    return this.driver.executeScript('return window.innerWidth + "x" + window.innerHeight').then((realSize:string) =>{
-                    
-                        throw new Error(`Error trying to set browser viewport size to: ${width}x${height} (it was ${realSize})\n` + e.toString());    
-                    });
+                    if(attempts > 0){
+                            
+                        return this._setBrowserSizeAndPositionAux(width, height, x, y, attempts - 1);
+                        
+                    }else{
+                        
+                        return this.driver.executeScript('return window.innerWidth + "x" + window.innerHeight').then((realSize:string) =>{
+                     
+                            throw new Error(`Error trying to set browser viewport size to: ${width}x${height} (it was ${realSize})\n` + e.toString());    
+                        });
+                    }
                 });
             });
         });
