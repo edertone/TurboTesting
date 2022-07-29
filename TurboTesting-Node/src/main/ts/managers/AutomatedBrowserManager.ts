@@ -195,6 +195,9 @@ export class AutomatedBrowserManager {
         let chromeOptions = new this.chrome.Options();
         let chromeCapabilities = this.webdriver.Capabilities.chrome();
         
+        // Disable the annoying console log: DevTools listening on ws://....
+        chromeOptions.excludeSwitches('enable-logging');
+        
         // Initialize the chrome driver with the specified language.
         chromeOptions.addArguments([`--lang=${language}`]);
         
