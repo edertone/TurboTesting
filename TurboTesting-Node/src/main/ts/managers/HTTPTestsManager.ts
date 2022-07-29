@@ -62,9 +62,16 @@ export class HTTPTestsManager {
     /**
      * Class that helps with the process of testing http requests and operations
      *  
+     * @param timeout We can specify a custom time limit for the http requests. Default value is 0, which is the system one
+     *
      * @return A HTTPTestsManager instance
      */
-    constructor() {
+    constructor(timeout?:number) {
+        
+        if(timeout !== undefined){
+            
+            this.httpManager.timeout = timeout;
+        }
                 
         // Make sure the XMLHttpRequest class is available. If not, initialize it from the xhr2 library
         try {

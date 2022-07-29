@@ -112,6 +112,32 @@ describe('AutomatedBrowserManagerTest', function() {
     });
     
     
+    it('should throw exception when passing an invalid snapShotPath to the saveSnapshot method', function() {
+    
+        expect(() => {this.automatedBrowserManager.saveSnapshot('')})
+            .toThrowError(Error, /Snapshot path must be to a PNG file/);
+         
+        expect(() => {this.automatedBrowserManager.saveSnapshot(projectRoot + 'asdfasdfas')})
+            .toThrowError(Error, /Snapshot path must be to a PNG file[\s\S]*asdfasdfas/);
+            
+        expect(() => {this.automatedBrowserManager.saveSnapshot(projectRoot + 'asdfasdfas/dfasdfasdfasdfa.png', '', {})})
+            .toThrowError(Error, /Cannot save snapshot to non existant path[\s\S]*dfasdfasdfasdfa/);
+    });
+    
+    
+    it('should correctly execute the saveSnapshot method', async function() {
+    
+        let snapshotpath = fm.getOSTempDirectory() + '/saveSnapshot-jasmine-test.png';
+    
+        await this.automatedBrowserManager.saveSnapshot(snapshotpath)
+            .then(() => {
+                
+                expect(fm.isFile(snapshotpath)).toBe(true);
+                expect(fm.deleteFile(snapshotpath)).toBe(true);
+            });
+    });
+        
+    
     it('should correctly execute the waitTillBrowserReady method', async function() {
     
         await expectAsync(this.automatedBrowserManager.waitTillBrowserReady()).toBeResolved();
@@ -780,10 +806,16 @@ describe('AutomatedBrowserManagerTest', function() {
     
     it('should throw exception when passing an invalid snapShotPath to the assertSnapshot method', function() {
     
+        expect(() => {this.automatedBrowserManager.assertSnapshot('', '', {})})
+            .toThrowError(Error, /Snapshot path must be to a PNG file/);
+        
         expect(() => {this.automatedBrowserManager.assertSnapshot(projectRoot + 'asdfasdfas', '', {})})
             .toThrowError(Error, /Snapshot path must be to a PNG file[\s\S]*asdfasdfas/);
             
         expect(() => {this.automatedBrowserManager.assertSnapshot(projectRoot + 'asdfasdfas/dfasdfasdfasdfa.png', '', {})})
+            .toThrowError(Error, /Specified an invalid path for failureSnapShotsPath/);
+            
+        expect(() => {this.automatedBrowserManager.assertSnapshot(projectRoot + 'asdfasdfas/dfasdfasdfasdfa.png', fm.getOSTempDirectory(), {})})
             .toThrowError(Error, /Cannot save snapshot to non existant path[\s\S]*dfasdfasdfasdfa/);
     });
     
@@ -844,6 +876,50 @@ describe('AutomatedBrowserManagerTest', function() {
         expect(fm.isFile(fm.getOSTempDirectory() + fm.dirSep() + 'basic-with-input-disabled-snapshot-800x600.png')).toBe(false);
         expect(fm.isFile(fm.getOSTempDirectory() + fm.dirSep() + 'basic-with-input-disabled-snapshot-800x600-failedSnapshot.png')).toBe(true);
         expect(fm.isFile(fm.getOSTempDirectory() + fm.dirSep() + 'basic-with-input-disabled-snapshot-800x600-failedSnapshotDiff.png')).toBe(true);
+    });
+    
+    
+    it('should correctly execute the waitTillJavaScriptCondition method', async function() {
+        
+        await this.automatedBrowserManager.waitTillJavaScriptCondition("1 === 1");
+    });
+    
+    
+    it('should fail when the waitTillJavaScriptCondition method is called with a wrong js expression', async function() {
+        
+        // Test with a 2 seconds timeout
+        this.automatedBrowserManager.waitTimeout = 2000;
+        
+        let start = new Date().getTime();
+        
+        await expectAsync(this.automatedBrowserManager.waitTillJavaScriptCondition("1 === 2"))
+            .toBeRejectedWithError(/Error waiting for javascript condition to be true/);
+        
+        let time = (new Date().getTime()) - start;
+        expect(time).toBeLessThan(3000);    
+        expect(time).toBeGreaterThan(2000);
+        
+        // Test with a 20 seconds timeout
+        this.automatedBrowserManager.waitTimeout = 10000;
+
+        start = new Date().getTime();
+        
+        await expectAsync(this.automatedBrowserManager.waitTillJavaScriptCondition("1 === 2"))
+            .toBeRejectedWithError(/Error waiting for javascript condition to be true/);
+        
+        time = (new Date().getTime()) - start;
+        expect(time).toBeLessThan(11000);    
+        expect(time).toBeGreaterThan(10000);
+        
+        // Test with a 5 seconds timeout as a parameter
+        start = new Date().getTime();
+        
+        await expectAsync(this.automatedBrowserManager.waitTillJavaScriptCondition("1 === 2", 5000))
+            .toBeRejectedWithError(/Error waiting for javascript condition to be true/);
+        
+        time = (new Date().getTime()) - start;
+        expect(time).toBeLessThan(6000);
+        expect(time).toBeGreaterThan(5000);
     });
     
     

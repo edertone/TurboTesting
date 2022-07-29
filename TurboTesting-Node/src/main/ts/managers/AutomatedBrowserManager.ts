@@ -135,6 +135,12 @@ export class AutomatedBrowserManager {
     
     
     /**
+     * Stores the NodeJs opn instance
+     */
+    private opn: any;
+    
+    
+    /**
      * Stores the NodeJs webdriver chrome instance
      */
     private chrome: any;
@@ -153,6 +159,10 @@ export class AutomatedBrowserManager {
         this.nodeUrl = require('url');
         this.nodeExecSync = require('child_process').execSync;
         this.webdriver = require('selenium-webdriver');
+        this.nodePNG = require('pngjs').PNG;
+        this.nodePixelmatch = require('pixelmatch');
+        this.nodeCanvas = require('canvas');
+        this.opn = require('opn');      
     }
     
     
@@ -166,8 +176,9 @@ export class AutomatedBrowserManager {
      *        will be stored on the provided fs path without any prompt.
      * @param disableGPU If set to true, the chrome browser won't use GPU to accelerate rendering. This is recommended to
      *        avoid having lots of useless gpu errors on the cmd output.
+     * @param headLess If enabled, chrome UI won't appear, everything will happen exactly the same but without being visible.
      */
-    initializeChrome(language = 'en', defaultDownloadPath = '', disableGPU = true){
+    initializeChrome(language = 'en', defaultDownloadPath = '', disableGPU = true, headLess = true){
         
         // Check that chrome driver is available on our system
         try{
@@ -199,6 +210,11 @@ export class AutomatedBrowserManager {
         // Force acceptance of https untrusted certificates
         chromeOptions.addArguments("--ignore-certificate-errors");
         chromeOptions.addArguments('--allow-insecure-localhost');
+        
+        if(headLess){
+            
+            chromeOptions.addArguments("--headless");
+        }
         
         // Enable logs so the tests can read them
         let loggingPrefs = new this.webdriver.logging.Preferences();
@@ -234,7 +250,7 @@ export class AutomatedBrowserManager {
      */
     setBrowserSizeAndPosition(width: number, height: number, x = 0, y = 0){
     
-        return this._setBrowserSizeAndPositionAux(width, height, x, y, 5);
+        return this._setBrowserSizeAndPositionAux(width, height, x, y, 7);
     }
     
     
@@ -257,7 +273,7 @@ export class AutomatedBrowserManager {
             return this.driver.manage().window().setRect({width: viewportSize[0], height: viewportSize[1], x: x, y: y}).then(() =>{
                 
                 // We must wait till the browser window is correctly resized before letting the execution continue
-                return this.waitTillJavaScriptCondition(`window.innerWidth === ${width} && window.innerHeight === ${height}`).then().catch((e:Error) => {
+                return this.waitTillJavaScriptCondition(`window.innerWidth === ${width} && window.innerHeight === ${height}`, 3000).then().catch((e:Error) => {
                     
                     if(attempts > 0){
                             
@@ -323,6 +339,46 @@ export class AutomatedBrowserManager {
         
         return this.driver.executeScript("return console.clear()");  
     }
+    
+    
+    /**
+     * Capture a snapshot of the current browser viewport contents and save it to the specified path
+     *
+     * @param snapShotPath The full path to a png file where the snapshot will be stored (including png extension)
+     * @param open False by default, if set to true the saved image will be opened by the default OS image viewer
+     *
+     * @return void
+     */
+    saveSnapshot(snapShotPath: string, open = false){
+        
+        // Test that specified path is a png file and the parent folder exists
+        if(StringUtils.getPathExtension(snapShotPath).toLowerCase() !== 'png'){
+            
+            throw new Error('Snapshot path must be to a PNG file:\n' + snapShotPath);
+        }
+        
+        if(!this.filesManager.isDirectory(StringUtils.getPath(snapShotPath))){
+            
+            throw new Error('Cannot save snapshot to non existant path:\n' + snapShotPath);
+        }
+        
+        return this.waitTillBrowserReady().then(() => {
+ 
+            // Get the screen shot for the browser window visible contents with selenium
+            return this.driver.takeScreenshot().then((data:any) => {
+    
+                let newSnapshot = this.nodePNG.sync.read(Buffer.from(data.replace(/^data:image\/png;base64,/, ''), 'base64'));
+    
+                this.filesManager.saveFile(snapShotPath, this.nodePNG.sync.write(newSnapshot));
+                
+                if(open){
+                    
+                    // opn is a node module that opens resources in a cross OS manner
+                    this.opn(snapShotPath);
+                }
+            });
+        });
+    }
 
 
     /**
@@ -350,11 +406,12 @@ export class AutomatedBrowserManager {
     /**
      * Wait till the specified javascript condition is evaluated as true, or fail after the class waitTimeout value is reached
      *
-     * @param condition A javascript expression to evaluate, like for example: 'document.readyState === "complete"'
+     * @param condition A javascript expression to evaluate. For example: 'document.readyState === "complete"'
+     * @param timeout The class global waitTimeout property is used as the default wait time limit. Setting it here allows us to change it for a specific method call
      *
      * @return A promise which will end correctly if the process finishes ok or fail with exception otherwise.
      */
-    waitTillJavaScriptCondition(condition:string){
+    waitTillJavaScriptCondition(condition:string, timeout?: number){
         
         return this.driver.wait(() => {
             
@@ -363,7 +420,7 @@ export class AutomatedBrowserManager {
                 return condition === true;
             });
             
-        }, this.waitTimeout).then().catch((e:Error) => {
+        }, timeout !== undefined ? timeout : this.waitTimeout).then().catch((e:Error) => {
             
             throw new Error('Error waiting for javascript condition to be true:\n' + condition + '\n' + e.toString());
         });
@@ -1123,18 +1180,10 @@ export class AutomatedBrowserManager {
                               ignoreRegions: {x: number, y: number, width: number, height: number}[]
                             }){
 
-        // Validate the snapshot path
-        StringUtils.forceNonEmptyString(snapShotPath, 'snapShotPath');
-        
-        // Test that specified path is a png file and the parent folder exists
+        // Test that specified path is a png file
         if(StringUtils.getPathExtension(snapShotPath).toLowerCase() !== 'png'){
             
             throw new Error('Snapshot path must be to a PNG file:\n' + snapShotPath);
-        }
-
-        if(!this.filesManager.isDirectory(StringUtils.getPath(snapShotPath))){
-            
-            throw new Error('Cannot save snapshot to non existant path:\n' + snapShotPath);
         }
         
         // Validate the failure snapshot path
@@ -1150,20 +1199,12 @@ export class AutomatedBrowserManager {
             throw new Error('Specified an invalid path for failureSnapShotsPath:\n' + failureSnapShotsPath);
         }
         
-        // Init required instances if necessary
-        if(this.nodePNG === null){
-            
-            this.nodePNG = require('pngjs').PNG;
-        }
+        // If the specified snapshot path does not exist, we will simply save the snapshot and finish
+        if(!this.filesManager.isFile(snapShotPath)){
         
-        if(this.nodePixelmatch === null){
-            
-            this.nodePixelmatch = require('pixelmatch');
-        }
-        
-        if(this.nodeCanvas === null){
-            
-            this.nodeCanvas = require('canvas');
+            this.saveSnapshot(snapShotPath);
+                
+            return;
         }
         
         // Initialize default options if necessary
@@ -1178,14 +1219,6 @@ export class AutomatedBrowserManager {
     
                 let newSnapshot = this.nodePNG.sync.read(Buffer.from(data.replace(/^data:image\/png;base64,/, ''), 'base64'));
     
-                // If the specified snapshot path does not exist, we will simply save the captured image and finish
-                if(!this.filesManager.isFile(snapShotPath)){
-                
-                    this.filesManager.saveFile(snapShotPath, this.nodePNG.sync.write(newSnapshot));
-                        
-                    return;
-                }
-            
                 // Load the previously stored snapshot to compare it with the new one
                 let oldSnapshot = this.nodePNG.sync.read(this.nodeFs.readFileSync(snapShotPath));
                 let diffSnapshot = new this.nodePNG({width: oldSnapshot.width, height: oldSnapshot.height});

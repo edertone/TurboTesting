@@ -17,22 +17,9 @@ const { HTTPTestsManager } = require(projectRoot + '/target/turbotesting-node/di
 
 describe('HTTPTestsManagerTest', function() {
     
-    beforeAll(function() {
-    });
-
-    
-    afterAll(function() {
-        
-    });
-        
     beforeEach(function() {
         
-        this.sut = new HTTPTestsManager();
-    });
-
-    
-    afterEach(function() {
-  
+        this.sut = new HTTPTestsManager(20000);
     });
     
     
