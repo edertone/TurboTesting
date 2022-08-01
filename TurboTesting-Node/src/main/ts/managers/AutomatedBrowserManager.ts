@@ -953,27 +953,7 @@ export class AutomatedBrowserManager {
     
         this.httpTestsManager.wildcards = this.wildcards;
         
-        return new Promise ((resolve:any, reject:any) => {
-            
-            try{
-                
-                this.httpTestsManager.assertUrlsFail(urls, (assertErrors:any) => {
-                
-                    if(assertErrors && assertErrors.length > 0){
-                        
-                        reject(new Error(assertErrors.join('\n')));
-                    
-                    }else{
-                        
-                        resolve();
-                    }                    
-                });
-                
-            }catch(e){
-                    
-                reject(e);
-            };
-        });
+        return this.httpTestsManager.assertUrlsFail(urls);
     }
     
     

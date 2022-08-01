@@ -16,6 +16,8 @@ declare let process: any;
 declare let global: any;
 declare function require(name: string): any;
 
+declare const Promise: any;
+
 
 /**
  * HTTPTestsManager class
@@ -105,9 +107,10 @@ export class HTTPTestsManager {
      *        "startWith" If defined, the url response must start with the specified text (or null if not used)<br>
      *        "endWith" If defined, the url response must end with the specified text (or null if not used)<br>
      *        "notContains" A string or an array of strings with texts that must NOT exist on the url response (or null if not used)
-     * @param completeCallback A method that will be called once all the urls from the list have been tested (If assert exceptions are disabled, the list of errors will also be found here).
+     *
+     * @return A promise which will end correctly if the process finishes ok or fail with exception otherwise (If assert exceptions are disabled, it will end correctly but with the list of errors) 
      */
-    assertUrlsFail(urls: any[], completeCallback: (assertErrors?: string[]) => void){
+    assertUrlsFail(urls: any[]){
         
         if(!ArrayUtils.isArray(urls)){
             
@@ -116,48 +119,51 @@ export class HTTPTestsManager {
 
         this.findDuplicateUrlValues(urls, 'HTTPTestsManager.assertUrlsFail duplicate urls:');
         
-        let anyErrors: string[] = [];
-        
-        // Perform a recursive execution for all the provided urls
-        let recursiveCaller = (index:number, completeCallback: (assertErrors?: string[]) => void) => {
-
-            if(index >= urls.length){
-                
-                if(this.isAssertExceptionsEnabled && anyErrors.length > 0){
+        return new Promise ((resolve: (assertErrors?: string[]) => void) => {
+            
+            let anyErrors: string[] = [];
+            
+            // Perform a recursive execution for all the provided urls
+            let recursiveCaller = (index:number) => {
+    
+                if(index >= urls.length){
                     
-                    throw new Error(`HTTPTestsManager.assertUrlsFail failed with ${anyErrors.length} errors:\n` + anyErrors.join('\n'));
+                    if(this.isAssertExceptionsEnabled && anyErrors.length > 0){
+                        
+                        throw new Error(`HTTPTestsManager.assertUrlsFail failed with ${anyErrors.length} errors:\n` + anyErrors.join('\n'));
+                    }
+    
+                    return resolve(anyErrors);
                 }
-
-                return completeCallback(anyErrors);
+                
+                let request = this.createRequestFromEntry(urls[index], anyErrors);
+                
+                request.errorCallback = (errorMsg: string, errorCode: number, response: string) => {
+                
+                    this.assertRequestContents(response, urls[index], anyErrors, String(errorCode), errorMsg);
+                    
+                    recursiveCaller(index + 1);
+                };
+                
+                request.successCallback = () => {
+                
+                    anyErrors.push(`URL expected to fail but was 200 ok: ${request.url}`);
+                
+                    recursiveCaller(index + 1);
+                };
+                
+                try{
+                    
+                    this.httpManager.execute(request);
+                    
+                } catch (e) {
+    
+                    recursiveCaller(index + 1);
+                }
             }
             
-            let request = this.createRequestFromEntry(urls[index], anyErrors);
-            
-            request.errorCallback = (errorMsg: string, errorCode: number, response: string) => {
-            
-                this.assertRequestContents(response, urls[index], anyErrors, String(errorCode), errorMsg);
-                
-                recursiveCaller(index + 1, completeCallback);
-            };
-            
-            request.successCallback = () => {
-            
-                anyErrors.push(`URL expected to fail but was 200 ok: ${request.url}`);
-            
-                recursiveCaller(index + 1, completeCallback);
-            };
-            
-            try{
-                
-                this.httpManager.execute(request);
-                
-            } catch (e) {
-
-                recursiveCaller(index + 1, completeCallback);
-            }
-        }
-        
-        recursiveCaller(0, completeCallback);
+            recursiveCaller(0);
+        });
     }
     
     
@@ -176,10 +182,11 @@ export class HTTPTestsManager {
      *        "startWith" If defined, the url response must start with the specified text (or null if not used)
      *        "endWith" If defined, the url response must end with the specified text (or null if not used)
      *        "notContains" A string or an array of strings with texts that must NOT exist on the url response (or null if not used)
-     * @param completeCallback A method that will be called once all the urls from the list have been tested. An array with all the results for
-     *        each request will be passed to this method (If assert exceptions are disabled, the list of errors will also be found here).
+     *
+     * @return A promise which will end correctly if the process finishes ok or fail with exception otherwise (If assert exceptions are disabled, it will
+     *         end correctly with the list of errors). The resulting structure is {responses: string[], assertErrors?: string[]}
      */
-    assertHttpRequests(urls: any[], completeCallback: (responses: string[], assertErrors?: string[]) => void){
+    assertHttpRequests(urls: any[]){
     
         if(!ArrayUtils.isArray(urls)){
             
@@ -188,58 +195,61 @@ export class HTTPTestsManager {
 
         this.findDuplicateUrlValues(urls, 'HTTPTestsManager.assertHttpRequests duplicate urls:');
         
-        let responses: string[] = [];
-        let anyErrors: string[] = [];
-        
-        // Perform a recursive execution for all the provided urls
-        let recursiveCaller = (urls: any[], completeCallback: (responses: string[], assertErrors?: string[]) => void) => {
+        return new Promise ((resolve: (results:any) => void) => {
             
-            if(urls.length <= 0){
+            let responses: string[] = [];
+            let anyErrors: string[] = [];
+            
+            // Perform a recursive execution for all the provided urls
+            let recursiveCaller = (urls: any[]) => {
                 
-                if(this.isAssertExceptionsEnabled && anyErrors.length > 0){
+                if(urls.length <= 0){
                     
-                    throw new Error(`HTTPTestsManager.assertHttpRequests failed with ${anyErrors} errors:\n` + anyErrors.join('\n'));
+                    if(this.isAssertExceptionsEnabled && anyErrors.length > 0){
+                        
+                        throw new Error(`HTTPTestsManager.assertHttpRequests failed with ${anyErrors.length} errors:\n` + anyErrors.join('\n'));
+                    }
+                    
+                    return resolve({responses: responses, assertErrors: anyErrors});
                 }
                 
-                return completeCallback(responses, anyErrors);
+                let entry = urls.shift();
+                
+                let request = this.createRequestFromEntry(entry, anyErrors);
+                
+                request.errorCallback = (errorMsg: string, errorCode: number, response: string) => {
+                
+                    responses.push(response);
+                    anyErrors.push(`Could not load url (${errorCode}): ${request.url}\n${errorMsg}\n${response}`);
+    
+                    recursiveCaller(urls);
+                };
+                
+                request.successCallback = (response: string) => {
+                    
+                    responses.push(response);
+                    
+                    this.assertRequestContents(response, entry, anyErrors, '200');
+                     
+                    recursiveCaller(urls);
+                };
+                
+                try{
+                    
+                    this.httpManager.execute(request);
+                    
+                } catch (e) {
+    
+                    anyErrors.push('Error performing http request to '+ request.url + '\n' + e.toString());
+    
+                    this.assertRequestContents('', entry, anyErrors, '0');
+    
+                    recursiveCaller(urls);
+                }
             }
             
-            let entry = urls.shift();
-            
-            let request = this.createRequestFromEntry(entry, anyErrors);
-            
-            request.errorCallback = (errorMsg: string, errorCode: number, response: string) => {
-            
-                responses.push(response);
-                anyErrors.push(`Could not load url (${errorCode}): ${request.url}\n${errorMsg}\n${response}`);
-
-                recursiveCaller(urls, completeCallback);
-            };
-            
-            request.successCallback = (response: string) => {
-                
-                responses.push(response);
-                
-                this.assertRequestContents(response, entry, anyErrors, '200');
-                 
-                recursiveCaller(urls, completeCallback);
-            };
-            
-            try{
-                
-                this.httpManager.execute(request);
-                
-            } catch (e) {
-
-                anyErrors.push('Error performing http request to '+ request.url + '\n' + e.toString());
-
-                this.assertRequestContents('', entry, anyErrors, '0');
-
-                recursiveCaller(urls, completeCallback);
-            }
-        }
-        
-        recursiveCaller(urls, completeCallback);        
+            recursiveCaller(urls);
+        });
     }
     
     

@@ -36,29 +36,29 @@ describe('HTTPTestsManagerTest', function() {
     });
     
     
-    it('should correctly execute the assertUrlsFail method when a list of invalid string urls are passed', function(done) {
+    it('should correctly execute the assertUrlsFail method when a list of invalid string urls are passed', async function() {
 
-        this.sut.assertUrlsFail(['', ' ', 'asdfsdfasdfasdf', '121212121212', 'https://invalid'], done);
+        await this.sut.assertUrlsFail(['', ' ', 'asdfsdfasdfasdf', '121212121212', 'https://invalid']);
     });
     
     
-    it('should correctly execute the assertUrlsFail method when a list of objects containing invalid urls are passed', function(done) {
+    it('should correctly execute the assertUrlsFail method when a list of objects containing invalid urls are passed', async function() {
 
         let urls = [{ url: "" }, { url: " " }, { url: "asdfsdfasdfasdf" }, { url: "121212121212" }, { url: "https://invalid" }];
         
-        this.sut.assertUrlsFail(urls, done);
+        await this.sut.assertUrlsFail(urls);
     });
     
     
-    it('should correctly execute the assertUrlsFail method when a mixed list of invalid string urls and objects containing invalid urls are passed', function(done) {
+    it('should correctly execute the assertUrlsFail method when a mixed list of invalid string urls and objects containing invalid urls are passed', async function() {
 
         let urls = ['1', { url: "" }, 'asdfsdfasdfasdf', { url: " " }, { url: "rtrtrtyrtyrty" }, 'https://invalid', { url: "121212121212" }, { url: "https://invalid2" }];
         
-        this.sut.assertUrlsFail(urls, done);
+        await this.sut.assertUrlsFail(urls);
     });
     
     
-    it('should correctly perform the expected assertions on the assertUrlsFail method when an invalid url is provided', function(done) {
+    it('should correctly perform the expected assertions on the assertUrlsFail method when an invalid url is provided', async function() {
 
         let urls = [{
             url: "https://stackoverflow.com/%",
@@ -67,71 +67,64 @@ describe('HTTPTestsManagerTest', function() {
             notContains: '23423werewrwer----34534534'
         }];
         
-        this.sut.assertUrlsFail(urls, done);
+        await this.sut.assertUrlsFail(urls);
     });
     
     
-    it('should generate assert exceptions for the assertUrlsFail method when a list of valid string urls are passed', function(done) {
+    it('should generate assert exceptions for the assertUrlsFail method when a list of valid string urls are passed', async function() {
 
         this.sut.isAssertExceptionsEnabled = false;
         
-        this.sut.assertUrlsFail(['https://www.google.com', 'https://www.github.com'], (assertErrors) => {
+        await this.sut.assertUrlsFail(['https://www.google.com', 'https://www.github.com']).then((assertErrors) => {
             
             expect(assertErrors.length).toBe(2);
             expect(assertErrors[0]).toContain("URL expected to fail but was 200 ok: https://www.google.com");
             expect(assertErrors[1]).toContain("URL expected to fail but was 200 ok: https://www.github.com");
-            
-            done();
         });
     });
     
     
-    it('should generate assert exceptions for the assertUrlsFail method when a list of valid string urls (after replacing the wildcards) are passed', function(done) {
+    it('should generate assert exceptions for the assertUrlsFail method when a list of valid string urls (after replacing the wildcards) are passed', async function() {
 
         this.sut.isAssertExceptionsEnabled = false;
         this.sut.wildcards = { $host: 'www.google.com' };
         
-        this.sut.assertUrlsFail(['https://$host'], (assertErrors) => {
+        await this.sut.assertUrlsFail(['https://$host']).then((assertErrors) => {
             
             expect(assertErrors.length).toBe(1);
             expect(assertErrors[0]).toContain("URL expected to fail but was 200 ok: https://www.google.com");
-            done();
         });
     });
     
     
-    it('should generate assert exceptions for the assertUrlsFail method when a list of objects containing valid urls are passed', function(done) {
+    it('should generate assert exceptions for the assertUrlsFail method when a list of objects containing valid urls are passed', async function() {
 
         this.sut.isAssertExceptionsEnabled = false;
         
-        this.sut.assertUrlsFail([{ url: "https://www.turboframework.org" }, { url: "https://www.google.com" }], (assertErrors) => {
+        await this.sut.assertUrlsFail([{ url: "https://www.turboframework.org" }, { url: "https://www.google.com" }]).then((assertErrors) => {
             
             expect(assertErrors.length).toBe(2);
             expect(assertErrors[0]).toContain("URL expected to fail but was 200 ok: https://www.turboframework.org");
             expect(assertErrors[1]).toContain("URL expected to fail but was 200 ok: https://www.google.com");
-            
-            done();
         });
     });
     
     
-    it('should generate assert exceptions for the assertUrlsFail method when a mixed list of valid string urls and objects containing valid urls are passed', function(done) {
+    it('should generate assert exceptions for the assertUrlsFail method when a mixed list of valid string urls and objects containing valid urls are passed', async function() {
 
         this.sut.isAssertExceptionsEnabled = false;
         
-        this.sut.assertUrlsFail([{ url: "https://www.turboframework.org" }, 'https://www.stackoverflow.com', { url: "https://www.google.com" }], (assertErrors) => {
+        await this.sut.assertUrlsFail([{ url: "https://www.turboframework.org" }, 'https://www.stackoverflow.com', { url: "https://www.google.com" }]).then((assertErrors) => {
             
             expect(assertErrors.length).toBe(3);
             expect(assertErrors[0]).toContain("URL expected to fail but was 200 ok: https://www.turboframework.org");
             expect(assertErrors[1]).toContain("URL expected to fail but was 200 ok: https://www.stackoverflow.com");
             expect(assertErrors[2]).toContain("URL expected to fail but was 200 ok: https://www.google.com");
-            
-            done();
         });
     });
     
     
-    it('should generate an exception when invalid properties have been passed to an entry for the assertUrlsFail method', function(done) {
+    it('should generate an exception when invalid properties have been passed to an entry for the assertUrlsFail method', async function() {
 
         this.sut.isAssertExceptionsEnabled = false;
         
@@ -143,12 +136,10 @@ describe('HTTPTestsManagerTest', function() {
             someinvalidProp: 'value'
         }];
         
-        this.sut.assertUrlsFail(urls, (assertErrors) => {
+        await this.sut.assertUrlsFail(urls).then((assertErrors) => {
             
             expect(assertErrors.length).toBe(1);
             expect(assertErrors[0]).toContain("Object has unexpected key: someinvalidProp");
-            
-            done();
         });
     });
     
@@ -166,25 +157,25 @@ describe('HTTPTestsManagerTest', function() {
     });
     
     
-    it('should correctly execute the assertHttpRequests method when a list of valid string urls are passed', function(done) {
+    it('should correctly execute the assertHttpRequests method when a list of valid string urls are passed', async function() {
 
-        this.sut.assertHttpRequests(['https://www.google.com', 'https://www.github.com'], done);      
+        await this.sut.assertHttpRequests(['https://www.google.com', 'https://www.github.com']);      
     });
     
     
-    it('should correctly execute the assertHttpRequests method when a list of objects containing valid urls are passed', function(done) {
+    it('should correctly execute the assertHttpRequests method when a list of objects containing valid urls are passed', async function() {
 
-        this.sut.assertHttpRequests([{ url: "https://www.github.com" }, { url: "https://www.google.com" }], done);
+        await this.sut.assertHttpRequests([{ url: "https://www.github.com" }, { url: "https://www.google.com" }]);
     });
     
     
-    it('should correctly execute the assertHttpRequests method when a mixed list of valid string urls and objects containing valid urls are passed', function(done) {
+    it('should correctly execute the assertHttpRequests method when a mixed list of valid string urls and objects containing valid urls are passed', async function() {
 
-        this.sut.assertHttpRequests([{ url: "https://www.github.com" }, 'https://www.stackoverflow.com', { url: "https://www.google.com" }], done);
+        await this.sut.assertHttpRequests([{ url: "https://www.github.com" }, 'https://www.stackoverflow.com', { url: "https://www.google.com" }]);
     });
     
     
-    it('should correctly perform the expected assertions on the assertHttpRequests method when a valid url is provided', function(done) {
+    it('should correctly perform the expected assertions on the assertHttpRequests method when a valid url is provided', async function() {
 
         let urls = [{
             url: "https://stackoverflow.com",
@@ -193,74 +184,66 @@ describe('HTTPTestsManagerTest', function() {
             notContains: '23423werewrwer----34534534'
         }];
         
-        this.sut.assertHttpRequests(urls, done); 
+        await this.sut.assertHttpRequests(urls); 
     });
     
     
-    it('should generate assert exceptions for the assertHttpRequests method when a list of invalid string urls are passed', function(done) {
+    it('should generate assert exceptions for the assertHttpRequests method when a list of invalid string urls are passed', async function() {
 
         this.sut.isAssertExceptionsEnabled = false;
         
-        this.sut.assertHttpRequests(['invalid1', 'invalid2'], (responses, assertErrors) => {
+        await this.sut.assertHttpRequests(['invalid1', 'invalid2']).then((result) => {
             
-            expect(assertErrors.length).toBe(2);
-            expect(assertErrors[0]).toContain("HTTPManager could not execute request to invalid1");
-            expect(assertErrors[1]).toContain("HTTPManager could not execute request to invalid2");
-            
-            done();
+            expect(result.assertErrors.length).toBe(2);
+            expect(result.assertErrors[0]).toContain("HTTPManager could not execute request to invalid1");
+            expect(result.assertErrors[1]).toContain("HTTPManager could not execute request to invalid2");
         });  
     });
     
     
-    it('should generate assert exceptions for the assertHttpRequests method when a list of objects containing invalid urls are passed', function(done) {
+    it('should generate assert exceptions for the assertHttpRequests method when a list of objects containing invalid urls are passed', async function() {
 
         this.sut.isAssertExceptionsEnabled = false;
         
-        this.sut.assertHttpRequests([{ url: "invalid1" }, { url: "invalid2" }], (responses, assertErrors) => {
+        await this.sut.assertHttpRequests([{ url: "invalid1" }, { url: "invalid2" }]).then((result) => {
             
-            expect(assertErrors.length).toBe(2);
-            expect(assertErrors[0]).toContain("HTTPManager could not execute request to invalid1");
-            expect(assertErrors[1]).toContain("HTTPManager could not execute request to invalid2");
-            
-            done();
+            expect(result.assertErrors.length).toBe(2);
+            expect(result.assertErrors[0]).toContain("HTTPManager could not execute request to invalid1");
+            expect(result.assertErrors[1]).toContain("HTTPManager could not execute request to invalid2");
         });
     });
     
     
-    it('should generate assert exceptions for the assertHttpRequests method when an url that gives error code is passed', function(done) {
+    it('should generate assert exceptions for the assertHttpRequests method when an url that gives error code is passed', async function() {
 
         this.sut.isAssertExceptionsEnabled = false;
         
-        this.sut.assertHttpRequests(["https://stackoverflow.com/%"], (responses, assertErrors) => {
+        await this.sut.assertHttpRequests(["https://stackoverflow.com/%"]).then((result) => {
             
-            expect(responses[0]).toContain('Bad Request');
-            expect(assertErrors.length).toBe(1);
-            expect(assertErrors[0]).toContain("Could not load url (400)");
-            expect(assertErrors[0]).toContain("Bad Request");
-            expect(assertErrors[0]).toContain("<");
-            
-            done();
+            expect(result.responses[0]).toContain('Bad Request');
+            expect(result.assertErrors.length).toBe(1);
+            expect(result.assertErrors[0]).toContain("Could not load url (400)");
+            expect(result.assertErrors[0]).toContain("Bad Request");
+            expect(result.assertErrors[0]).toContain("<");
         });
     });
     
     
-    it('should generate assert exceptions for the assertHttpRequests method when a mixed list of invalid string urls and objects containing invalid urls are passed', function(done) {
+    it('should generate assert exceptions for the assertHttpRequests method when a mixed list of invalid string urls and objects containing invalid urls are passed', async function() {
 
         this.sut.isAssertExceptionsEnabled = false;
         
-        this.sut.assertHttpRequests([{ url: "invalid1" }, 'invalid2', { url: "invalid3" }], (responses, assertErrors) => {
+        await this.sut.assertHttpRequests([{ url: "invalid1" }, 'invalid2', { url: "invalid3" }]).then((result) => {
             
-            expect(assertErrors.length).toBe(3);
-            expect(assertErrors[0]).toContain("HTTPManager could not execute request to invalid1");
-            expect(assertErrors[1]).toContain("HTTPManager could not execute request to invalid2");
-            expect(assertErrors[2]).toContain("HTTPManager could not execute request to invalid3");
-            
-            done();
+            expect(result.assertErrors.length).toBe(3);
+            expect(result.assertErrors[0]).toContain("HTTPManager could not execute request to invalid1");
+            expect(result.assertErrors[1]).toContain("HTTPManager could not execute request to invalid2");
+            expect(result.assertErrors[2]).toContain("HTTPManager could not execute request to invalid3");
         });  
     });
     
     
-    it('should generate an exception when invalid properties have been passed to an entry for the assertHttpRequests method', function(done) {
+    it('should generate an exception when invalid properties have been passed to an entry for the assertHttpRequests method', async function() {
 
         this.sut.isAssertExceptionsEnabled = false;
         
@@ -270,14 +253,12 @@ describe('HTTPTestsManagerTest', function() {
             someinvalidProp: 'value'
         }];
         
-        this.sut.assertHttpRequests(urls, (responses, assertErrors) => {
+        await this.sut.assertHttpRequests(urls).then((result) => {
             
-            expect(assertErrors.length).toBe(3);
-            expect(assertErrors[0]).toContain("Object has unexpected key: someinvalidProp");
-            expect(assertErrors[1]).toContain("HTTPManager could not execute request to someinvalidurl");
-            expect(assertErrors[2]).toContain("Response code for the url: someinvalidurl was expected to be 200 but was 0");
-            
-            done();
+            expect(result.assertErrors.length).toBe(3);
+            expect(result.assertErrors[0]).toContain("Object has unexpected key: someinvalidProp");
+            expect(result.assertErrors[1]).toContain("HTTPManager could not execute request to someinvalidurl");
+            expect(result.assertErrors[2]).toContain("Response code for the url: someinvalidurl was expected to be 200 but was 0");
         });
     });
 });
