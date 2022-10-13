@@ -495,6 +495,8 @@ describe('AutomatedBrowserManagerTest', function() {
     
     it('should correctly execute the assertUrlsLoadOk method on an internet url with asserts on the original source code', async function() {
         
+        this.automatedBrowserManager.ignoreConsoleErrors = ["googletagmanager.com"];
+        
         // To perform this test we are using the turboframework url that should not change ever
         await this.automatedBrowserManager.assertUrlsLoadOk([{
             url: "https://turboframework.org/en",
@@ -507,9 +509,31 @@ describe('AutomatedBrowserManagerTest', function() {
     });
     
     
-    it('should correctly execute the assertUrlsLoadOk method with more than one url calls', async function() {
+    it('should fail assertions on the assertUrlsLoadOk method with more than one url calls when one is not valid', async function() {
+                
+        this.automatedBrowserManager.ignoreConsoleErrors = ["googletagmanager.com"];
         
-        // TODO !!!
+        await expectAsync(this.automatedBrowserManager.assertUrlsLoadOk([
+            { url: "https://turboframework.org/en" },                 
+            { url: "https://turboframework.org/en/libs/home" },                 
+            { url: "https://asdfasfsafasdfasdfasdfasfdasdf.asdfasdfasfdasf" },                 
+            { url: "https://turboframework.org/en/docs" },                 
+            { url: "https://turboframework.org/en/download" }               
+        ])).toBeRejectedWithError(/Error in loadUrl trying to get https:..asdfasfsafasdfasdfasdfasfdasdf.asdfasdfasfdasf/);
+    });
+    
+    
+    it('should correctly execute the assertUrlsLoadOk method with more than one url calls', async function() {
+                
+        this.automatedBrowserManager.ignoreConsoleErrors = ["googletagmanager.com"];
+        
+        await this.automatedBrowserManager.assertUrlsLoadOk([
+            { url: "https://turboframework.org/en" },                 
+            { url: "https://turboframework.org/en/libs/home" },                 
+            { url: "https://turboframework.org/en/apps" },                 
+            { url: "https://turboframework.org/en/docs" },                 
+            { url: "https://turboframework.org/en/download" }               
+        ]);
     });
     
     
@@ -854,7 +878,7 @@ describe('AutomatedBrowserManagerTest', function() {
             ['setBrowserSizeAndPosition', 1000, 600, 0, 0],
             ['loadUrl', projectRoot + '/src/test/resources/managers/automatedBrowserManager/basic-html/basic-with-input-disabled.html'],
             ['assertSnapshot', projectRoot + '/src/test/resources/managers/automatedBrowserManager/snapshots/basic-with-input-disabled-snapshot-800x600.png', fm.getOSTempDirectory(), {}]
-        ])).toBeRejectedWithError(/Snapshot size mismatch: Expected 800x600px, but received 1000x600px[\s\S]*Please make sure your snapshot has the same exact s/);
+        ])).toBeRejectedWithError(/Snapshot size mismatch: Expected .saved. 800x600px, but received .browser. 1000x600px[\s\S]*Please make sure your snapshot has the same exact s/);
     });
     
     

@@ -350,7 +350,7 @@ export class AutomatedBrowserManager {
      * @param snapShotPath The full path to a png file where the snapshot will be stored (including png extension)
      * @param open False by default, if set to true the saved image will be opened by the default OS image viewer
      *
-     * @return void
+     * @return A promise which will end correctly if the process finishes ok or fail with exception otherwise.
      */
     saveSnapshot(snapShotPath: string, open = false){
         
@@ -1162,7 +1162,7 @@ export class AutomatedBrowserManager {
                               tolerance: number,
                               ignoreRegions: {x: number, y: number, width: number, height: number}[]
                             }){
-
+                            
         // Test that specified path is a png file
         if(StringUtils.getPathExtension(snapShotPath).toLowerCase() !== 'png'){
             
@@ -1176,7 +1176,7 @@ export class AutomatedBrowserManager {
             
             failureSnapShotsPath = StringUtils.getPath(snapShotPath);
         }
-            
+                
         if(!this.filesManager.isDirectory(failureSnapShotsPath)){
             
             throw new Error('Specified an invalid path for failureSnapShotsPath:\n' + failureSnapShotsPath);
@@ -1185,16 +1185,34 @@ export class AutomatedBrowserManager {
         // If the specified snapshot path does not exist, we will simply save the snapshot and finish
         if(!this.filesManager.isFile(snapShotPath)){
         
-            this.saveSnapshot(snapShotPath);
-                
-            return;
+            return this.saveSnapshot(snapShotPath);
         }
         
         // Initialize default options if necessary
         options.maxDifferentPixels = options.hasOwnProperty('maxDifferentPixels') ? options.maxDifferentPixels : 0;
         options.tolerance = options.hasOwnProperty('tolerance') ? options.tolerance : 0.1;
         options.ignoreRegions = options.hasOwnProperty('ignoreRegions') ? options.ignoreRegions : [];
-        
+                                  
+        return this._assertSnapshotAux(snapShotPath, failureSnapShotsPath, options, 5);              
+    }
+                       
+                            
+    /**
+     * Auxiliary method for the assertSnapshot method. It will run the test for the amount of retries and fail once all attempts have been performed
+     * 
+     * @param snapShotPath see assertSnapshot docs
+     * @param failureSnapShotsPath see assertSnapshot docs
+     * @param options see assertSnapshot docs
+     * @param attempts The number of retries to perform
+     *
+     * @return see assertSnapshot docs
+     */
+    private _assertSnapshotAux(snapShotPath: string, failureSnapShotsPath: string,
+                   options: { maxDifferentPixels: number,
+                              tolerance: number,
+                              ignoreRegions: {x: number, y: number, width: number, height: number}[]
+                            }, attempts: number){
+                
         return this.waitTillBrowserReady().then(() => {
  
             // Get the screen shot for the browser window visible contents with selenium
@@ -1209,8 +1227,16 @@ export class AutomatedBrowserManager {
                 // Both snapshots must be the same size
                 if(oldSnapshot.width !== newSnapshot.width || oldSnapshot.height !== newSnapshot.height){
                     
-                    throw new Error(`Snapshot size mismatch: Expected ${oldSnapshot.width}x${oldSnapshot.height}px, but received ${newSnapshot.width}x${newSnapshot.height}px\n${snapShotPath}\n` +
-                    'Please make sure your snapshot has the same exact size as the browser window that is being tested');
+                    if(attempts > 0){
+                
+                        return this.waitMilliseconds(2000).then(() => {
+                            
+                            return this._assertSnapshotAux(snapShotPath, failureSnapShotsPath, options, attempts - 1);
+                        });
+                    }
+                
+                    throw new Error(`Snapshot size mismatch: Expected (saved) ${oldSnapshot.width}x${oldSnapshot.height}px, but received (browser) ${newSnapshot.width}x${newSnapshot.height}px\n${snapShotPath}\n` +
+                        'Please make sure your snapshot has the same exact size as the browser window that is being tested');
                 }
                 
                 // Paint in black on both snapshots the specified ignore regions so they do not count for the comparison
@@ -1251,12 +1277,20 @@ export class AutomatedBrowserManager {
                 // Test diferent pixels are as expected
                 if(options.maxDifferentPixels < differentPixels){
                     
+                    if(attempts > 0){
+                
+                        return this.waitMilliseconds(2000).then(() => {
+                            
+                            return this._assertSnapshotAux(snapShotPath, failureSnapShotsPath, options, attempts - 1);
+                        });
+                    }
+                    
                     // Save the new failure snapshot and the diff image at the same place where the old one is found
                     let failSnapshotFullPath = failureSnapShotsPath + this.filesManager.dirSep() + StringUtils.getPathElementWithoutExt(snapShotPath);
                     
                     this.filesManager.saveFile(failSnapshotFullPath + '-failedSnapshot.png', this.nodePNG.sync.write(newSnapshot));
                     this.filesManager.saveFile(failSnapshotFullPath + '-failedSnapshotDiff.png', this.nodePNG.sync.write(diffSnapshot));
-
+                    
                     throw new Error(`Snapshot mismatch: Allowed ${options.maxDifferentPixels} different pixels, but found ${differentPixels}\n${snapShotPath}\n` +
                         `Saved new snapshot (ignored regions painted in black) and diff file to:\n${failureSnapShotsPath}\nPlease use that snapshot if you think is correct now`);
                 };
