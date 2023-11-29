@@ -207,7 +207,8 @@ export class HTTPTestsManager {
                     
                     if(this.isAssertExceptionsEnabled && anyErrors.length > 0){
                         
-                        throw new Error(`HTTPTestsManager.assertHttpRequests failed with ${anyErrors.length} errors:\n` + anyErrors.join('\n'));
+                        throw new Error(`HTTPTestsManager.assertHttpRequests failed with ${anyErrors.length} errors:\n` + anyErrors.join('\n') +
+                                        `\n\nLIST OF RESPONSES:\n` + responses.join('\n\n'));
                     }
                     
                     return resolve({responses: responses, assertErrors: anyErrors});
@@ -259,7 +260,7 @@ export class HTTPTestsManager {
     private findDuplicateUrlValues(urls: any[], errorMessageHeading: string){
         
         // Fail if list has duplicate values
-        let urlHashesList = [];
+        let urlHashesList: any[] = [];
         
         for (let url of urls) {
             
