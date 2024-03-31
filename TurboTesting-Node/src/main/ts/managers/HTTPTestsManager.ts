@@ -255,6 +255,112 @@ export class HTTPTestsManager {
     
     
     /**
+     * Test the result of a list of urls (which can be loaded using HTTP POST) against a custom method.
+     * The method will receive the response for each one of the calls. We can then perform with this method any assert we want with the result 
+     * of each url call.
+     * 
+     * Notice that urls will be executed one after the other in the same order as provided
+     * 
+     * If any of the provided urls fails or does not exist, the test will fail
+     * 
+     * @param urls An array of objects where each one contains the following properties:
+     *        "url" the url to test
+     *        "postParameters" If defined, an object containing key pair values that will be sent as POST parameters to the url. If this property does not exist, the request will be a GET one.
+     *        "data" A parameter that we can use to send extra information we may need the assert method. For example a list of expected values for that url call
+     *
+     * @return A promise which will end correctly if the process finishes ok or fail with exception otherwise (If assert exceptions are disabled, it will
+     *         end correctly with the list of errors). The resulting structure is {responses: string[], assertErrors?: string[]}
+     */
+    assertMethodToUrls(urls: any[], method:(assertData:any) => void){
+        
+        if(!ArrayUtils.isArray(urls)){
+            
+            throw new Error('urls parameter must be an array');
+        }
+        
+        // Verify the urls have the mandatory properties
+        for(let url of urls){
+            
+            if(!url.hasOwnProperty('url')){
+            
+                throw new Error('Url object does not have mandatory url property');
+            }
+            
+            if(!url.hasOwnProperty('postParameters')){
+            
+                throw new Error('Url object does not have mandatory postParameters property');
+            }
+        }
+        
+        return new Promise ((resolve: (results:any) => void) => {
+            
+            let responses: string[] = [];
+            let anyErrors: string[] = [];
+            
+            // Perform a recursive execution for all the provided urls
+            let recursiveCaller = (urls: any[]) => {
+                
+                if(urls.length <= 0){
+                    
+                    if(this.isAssertExceptionsEnabled && anyErrors.length > 0){
+                        
+                        throw new Error(`HTTPTestsManager.assertMethodToUrls failed with ${anyErrors.length} errors:\n` + anyErrors.join('\n') +
+                                        `\n\nLIST OF RESPONSES:\n` + responses.join('\n\n'));
+                    }
+                    
+                    return resolve({responses: responses, assertErrors: anyErrors});
+                }
+                
+                let entry = urls.shift();
+                
+                let request = this.createRequestFromEntry(entry, anyErrors, false);
+                
+                request.errorCallback = (errorMsg: string, errorCode: number, response: string) => {
+                
+                    responses.push(response);
+                    anyErrors.push(`Could not load url (${errorCode}): ${request.url}\n${errorMsg}\n${response}`);
+    
+                    recursiveCaller(urls);
+                };
+                
+                request.successCallback = (response: string) => {
+                    
+                    responses.push(response);
+                    
+                    try{
+                        
+                        method({
+                            url: entry.url,
+                            response: response,
+                            data: entry.data
+                        });
+                        
+                    } catch (e) {
+        
+                        anyErrors.push('Error on method called asserting url '+ request.url + '\n' + e.toString());
+                    }
+ 
+                    recursiveCaller(urls);
+                };
+                
+                try{
+                    
+                    this.httpManager.execute(request);
+                    
+                } catch (e) {
+    
+                    anyErrors.push('Error performing http request to '+ request.url + '\n' + e.toString());
+    
+                    recursiveCaller(urls);
+                }
+            }
+            
+            recursiveCaller(urls);
+        });
+    }
+    
+    
+    /**
      * Aux method to find duplicate values on an url list
      */
     private findDuplicateUrlValues(urls: any[], errorMessageHeading: string){
@@ -291,7 +397,7 @@ export class HTTPTestsManager {
     /**
      * Aux method to generate an http request from the data of an entry
      */
-    private createRequestFromEntry(entry: any, anyErrors: string[]){
+    private createRequestFromEntry(entry: any, anyErrors: string[], validateProperties = true){
         
         if(StringUtils.isString(entry)){
 
@@ -301,18 +407,25 @@ export class HTTPTestsManager {
         }
         
         // Check that the provided entry object is correct
-        try {
+        if(validateProperties){
             
-            this.objectTestsManager.assertObjectProperties(entry,
-                ["url", "postParameters", "responseCode", "is", "contains", "startWith", "endWith", "notContains"], false);
+            try {
                 
-        } catch (e) {
-        
-            anyErrors.push(e.toString());
-        } 
+                this.objectTestsManager.assertObjectProperties(entry,
+                    ["url", "postParameters", "responseCode", "is", "contains", "startWith", "endWith", "notContains"], false);
+                    
+            } catch (e) {
+            
+                anyErrors.push(e.toString());
+            } 
+        }
                     
         entry.url = this.stringTestsManager.replaceWildCardsOnText(entry.url, this.wildcards);
-        entry.contains = this.objectTestsManager.replaceWildCardsOnObject(entry.contains, this.wildcards);
+        
+        if(entry.hasOwnProperty('contains')){
+        
+            entry.contains = this.objectTestsManager.replaceWildCardsOnObject(entry.contains, this.wildcards);
+        }
         
         let request: HTTPManagerBaseRequest;
             

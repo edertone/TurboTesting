@@ -112,7 +112,7 @@ export class ObjectTestsManager {
             }
         }
         
-        // Check that all the project keys appear on the keys list
+        // Check that all the object keys appear on the keys list
         for (let key of objectKeys) {
     
             if(keys.indexOf(key) < 0){

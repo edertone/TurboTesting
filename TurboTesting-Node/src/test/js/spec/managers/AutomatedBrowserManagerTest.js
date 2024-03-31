@@ -274,24 +274,26 @@ describe('AutomatedBrowserManagerTest', function() {
     });
     
     
-    it('should correctly execute the assertBrowserState method for the google.com page', async function() {
+    it('should correctly execute the assertBrowserState method for a basic html page', async function() {
         
-        await this.automatedBrowserManager.loadUrl('https://www.google.com')
+        this.automatedBrowserManager.wildcards = {$projectRoot: projectRoot};
+
+        await this.automatedBrowserManager.loadUrl('$projectRoot/src/test/resources/managers/automatedBrowserManager/basic-html/basic.html')
             .then(() => {
         
             return this.automatedBrowserManager.assertBrowserState({
-                url: "google.com",
-                titleContains: "Google",
-                loadedHtmlStartsWith: '<html',
+                url: "automatedBrowserManager/basic-html/basic.html",
+                titleContains: "Convert text to camel case online",
+                loadedHtmlStartsWith: '<html lang="en">',
                 loadedHtmlEndsWith: "</html>",
-                loadedHtmlContains: ['Google'],
-                loadedHtmlRegExp: /Google/,
+                loadedHtmlContains: ['Turbo Commons'],
+                loadedHtmlRegExp: /Turbo Commons/,
                 loadedHtmlNotContains: 'nottocontaintextstring',
                 sourceHtmlStartsWith: '<!doctype html>',
                 sourceHtmlEndsWith: "</html>",
                 sourceHtmlNotContains: 'nottocontaintextstring',
-                sourceHtmlContains: ['Google'],
-                sourceHtmlRegExp: /Google/,
+                sourceHtmlContains: ['Turbo Commons'],
+                sourceHtmlRegExp: /Turbo Commons/,
             });    
         });
     });
@@ -299,7 +301,9 @@ describe('AutomatedBrowserManagerTest', function() {
     
     it('should fail the assertion for the assertBrowserState method for an internet url when invalid expected values are provided for the source HTML', async function() {
 
-        await expectAsync(this.automatedBrowserManager.loadUrl('https://www.google.com')
+        this.automatedBrowserManager.wildcards = {$projectRoot: projectRoot};
+
+        await expectAsync(this.automatedBrowserManager.loadUrl('$projectRoot/src/test/resources/managers/automatedBrowserManager/basic-html/basic.html')
             .then(() => {
         
             return this.automatedBrowserManager.assertBrowserState({

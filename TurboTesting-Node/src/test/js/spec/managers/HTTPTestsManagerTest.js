@@ -261,4 +261,113 @@ describe('HTTPTestsManagerTest', function() {
             expect(result.assertErrors[2]).toContain("Response code for the url: someinvalidurl was expected to be 200 but was 0");
         });
     });
+    
+    
+    it('should correctly execute the assertMethodToUrls method when a list of valid string urls are passed', async function() {
+
+        let urls = [
+            {
+                url: 'https://turboframework.org/en/blog/2024-02-19/easily-show-material-calendar-with-angular-to-pick-date',
+                postParameters: {},
+                data: 'show an Angular material calendar'
+            },
+            {
+                url: 'https://turboframework.org/en/blog/2024-01-01/get-size-file-directory-using-javascript-typescript-php',
+                postParameters: {},
+                data: 'size of a file or a directory'
+            } 
+        ];
+
+        await this.sut.assertMethodToUrls(urls, (assertData) => {
+            
+            expect(assertData.response).toContain(assertData.data);
+        });  
+    });
+    
+    
+    it('should generate assert exceptions for the assertMethodToUrls method when the urls are invalid', async function() {
+
+        this.sut.isAssertExceptionsEnabled = false;
+        
+        let urls = [
+            {
+                url: 'uHFtFgrt2ty66TGGHhfg2ghH$$',
+                postParameters: {},
+                data: ''
+            },
+            {
+                url: '1232343423432HGGGg--',
+                postParameters: {},
+                data: ''
+            } 
+        ];
+        
+        await this.sut.assertMethodToUrls(urls, (assertData) => {
+            
+        }).then((result) => {
+            
+            expect(result.assertErrors.length).toBe(2);
+            expect(result.assertErrors[0]).toContain("Error performing http request to uHFtFgrt2ty66TGGHhfg2ghH$$");
+            expect(result.assertErrors[1]).toContain("Error performing http request to 1232343423432HGGGg--");
+        });  
+    });
+    
+    
+    it('should generate assert exceptions for the assertMethodToUrls method when the assert method fails the verification', async function() {
+
+        this.sut.isAssertExceptionsEnabled = false;
+        
+        let urls = [
+            {
+                url: 'https://turboframework.org/en/blog/2024-02-19/easily-show-material-calendar-with-angular-to-pick-date',
+                postParameters: {},
+                data: 'hgfGgt2tgVhg2gbHbv2ghnNh2'
+            },
+            {
+                url: 'https://turboframework.org/en/blog/2024-01-01/get-size-file-directory-using-javascript-typescript-php',
+                postParameters: {},
+                data: 'cocococococococococo'
+            } 
+        ];
+        
+        await this.sut.assertMethodToUrls(urls, (assertData) => {
+            
+            if(!assertData.response.includes(assertData.data)){
+            
+                throw new Error(assertData.data + ' not found');
+            }
+            
+        }).then((result) => {
+            
+            expect(result.assertErrors.length).toBe(2);
+            expect(result.assertErrors[0]).toContain("hgfGgt2tgVhg2gbHbv2ghnNh2 not found");
+            expect(result.assertErrors[1]).toContain("cocococococococococo");
+        });  
+    });
+    
+    
+    it('should throw exception when calling assertMethodToUrls if the provided url object does not have mandatory properties', function() {
+
+        let urls = [
+            {
+                url: 'https://turboframework.org/en/blog/2024-02-19/easily-show-material-calendar-with-angular-to-pick-date',
+                data: 'hgfGgt2tgVhg2gbHbv2ghnNh2'
+            } 
+        ];
+
+        expect(() => {this.sut.assertMethodToUrls(urls, () => {})})
+            .toThrowError(Error, /Url object does not have mandatory postParameters property/);
+        
+        
+        urls = [
+            {
+                postParameters: {},
+                data: 'cocococococococococo'
+            } 
+        ];
+          
+        expect(() => {this.sut.assertMethodToUrls(urls, () => {})})
+            .toThrowError(Error, /Url object does not have mandatory url property/);
+    });
+
 });
