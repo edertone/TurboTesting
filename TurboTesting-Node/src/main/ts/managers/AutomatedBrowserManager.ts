@@ -1099,6 +1099,7 @@ export class AutomatedBrowserManager {
      *        - To search by id: "//*[@id='someId']"
      *        - To search by the href value of all a elements: "//a[contains(@href, 'someurl')]"
      *        - To search by the href value of all a elements that are inside a section element: "//section/a[contains(@href, 'someurl')]"
+     *        - To search a text: "//*[text()[contains(., 'some text to search')]]"
      * @param clickable True if we expect the elements to be clickable, false otherwise
      *
      * @return A promise. When resolved correctly, all the found instances will be passed the .then() method
