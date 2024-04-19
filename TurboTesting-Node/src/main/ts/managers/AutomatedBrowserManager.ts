@@ -1435,6 +1435,21 @@ export class AutomatedBrowserManager {
     
     
     /**
+     * If you have an input that is used to browse for local files, this method will perform the file load for you.
+     * Just set the path of the file you want to load, and it will be automatically loaded into the input element.
+     * 
+     * @param id The html id for the input element that we want to use to load a file
+     * @param path The full OS path to the file we want to load with the input element
+     *
+     * @return A promise which will end correctly if the process finishes ok or fail with exception otherwise.
+     */
+    sendFilePathToInputById(id:string, path:string){
+        
+        return this.sendKeysById(id, path);
+    }
+    
+    
+    /**
      * Send text to the specified document element 
      * 
      * @param id The html id for the element that we want to send text to
