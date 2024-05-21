@@ -969,6 +969,12 @@ describe('AutomatedBrowserManagerTest', function() {
     });
     
     
+    it('should correctly execute the clickByText method', async function() {
+        
+        // TODO
+    });
+    
+    
     it('should correctly execute the clickByXpath method', async function() {
         
         // TODO

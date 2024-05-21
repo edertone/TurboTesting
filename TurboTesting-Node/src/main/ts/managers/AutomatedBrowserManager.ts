@@ -35,6 +35,14 @@ export class AutomatedBrowserManager {
     
     
     /**
+     * Defines the pause that is applied on some of the class methods to mimic the human behaviour, by pausing the interactions
+     * for a small amount of time. This will improve automation by making it more similar to a human interaction, but will also
+     * make all interactions a bit slower. It can be modified to taste
+     */
+    humanInteractionTime = 1300;
+    
+    
+    /**
      * An object containing key / pair values where each key is the name of a wildcard,
      * and the key value is the text that will replace each wildcard on all the texts analyzed
      * by this class (urls, html code, document titles, etc...)
@@ -1319,7 +1327,7 @@ export class AutomatedBrowserManager {
     
     
     /**
-     * Click on one or more document elements (sequentially) by id, waiting 1.5 seconds between each call
+     * Click on one or more document elements (sequentially) by id, waiting this.humanInteractionTime miliseconds between each call
      * 
      * @param id A single string with the id for the element which we want to click or a list of ids that will be sequentially clicked
      *        one after the other. Any failure trying to click any of the provided ids will throw an exception
@@ -1340,7 +1348,28 @@ export class AutomatedBrowserManager {
     
     
     /**
-     * Click on one or more document elements (sequentially) by xpath, waiting 1.5 seconds between each call
+     * Click on one or more document elements (sequentially) that contain the provided text, waiting this.humanInteractionTime miliseconds between each call
+     * 
+     * @param text A single string with the text for the element which we want to click or a list of texts that will be sequentially clicked
+     *        one after the other. Any failure trying to click any of the provided ids will throw an exception
+     *
+     * @return A promise which will end correctly if the process finishes ok or fail with exception otherwise.
+     */
+    clickByText(text:string|string[]){
+        
+        let texts = ArrayUtils.isArray(text) ? text as string[] : [text as string];
+        
+        for(let i = 0; i < texts.length; i++){
+            
+            texts[i] = "//*[text()[contains(., '" + texts[i] + "')]]";
+        }
+        
+        return this.clickByXpath(texts);
+    }
+    
+    
+    /**
+     * Click on one or more document elements (sequentially) by xpath, waiting this.humanInteractionTime miliseconds between each call
      * 
      * @param xpath A single string with the xpath query that lets us find the element which we want to click or a list of xpaths
      *        that will be sequentially clicked one after the other. Any failure trying to click any of the provided xpaths will throw an exception
@@ -1360,7 +1389,7 @@ export class AutomatedBrowserManager {
             
             return this._clickByXpathAux(xpathsArray[index], 5).then(() => {
                 
-                return this.waitMilliseconds(xpathsArray.length <= 0 ? 0 : 1500).then(() => {
+                return this.waitMilliseconds(xpathsArray.length <= 0 ? 0 : this.humanInteractionTime).then(() => {
                     
                     return recursiveCaller(index + 1);
                 });
