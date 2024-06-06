@@ -151,6 +151,11 @@ export class StringTestsManager {
         
         for (let fragment of fragmentsArray) {
             
+            if(fragment === ''){
+                
+                continue;
+            }
+            
             indexesFound.push(text.indexOf(fragment));
             
             if(indexesFound[indexesFound.length - 1] < 0){

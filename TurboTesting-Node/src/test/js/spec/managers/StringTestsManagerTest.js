@@ -58,15 +58,28 @@ describe('StringTestsManagerTest', function() {
     
     
     it('should correctly run assertTextContainsAll when strict order is true', function() {
+        
+        expect(() => {this.sut.assertTextContainsAll('hello', ['h', ''])}).not.toThrow();
+        
+        expect(() => {this.sut.assertTextContainsAll('hello', ['h', 'll', ''])}).not.toThrow();
 
         expect(() => {this.sut.assertTextContainsAll('hello', ['h', 'e', 'o'])}).not.toThrow();
         
         expect(() => {this.sut.assertTextContainsAll('hello', ['e', 'h'])})
             .toThrowError(Error, /StringTestsManager.assertTextContainsAll failed with 1 errors/);
         
+        expect(() => {this.sut.assertTextContainsAll('hello world again for', ['for', 'hello'])})
+            .toThrowError(Error, /does not follow the expected strict order/);
+                                
         expect(() => {this.sut.assertTextContainsAll('hello world again for', ['for', 'hello', 'again'])})
             .toThrowError(Error, /StringTestsManager.assertTextContainsAll failed with 2 errors/);
         
+        expect(() => {this.sut.assertTextContainsAll('hello world again for', ['hello', 'again', 'for'])}).not.toThrow();
+        
+        expect(() => {this.sut.assertTextContainsAll('hello world again for', ['hello', '', 'again', 'for'])}).not.toThrow();
+            
+        expect(() => {this.sut.assertTextContainsAll('hello world again for', ['hello', 'world', 'again', 'for'])}).not.toThrow();
+                    
         expect(() => {this.sut.assertTextContainsAll('hello', ['h', 'l', 'o'])}).not.toThrow();
         
         expect(() => {this.sut.assertTextContainsAll('one two three two four', ['one', 'two', 'four'])}).not.toThrow();
