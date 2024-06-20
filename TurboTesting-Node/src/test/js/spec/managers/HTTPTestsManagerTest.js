@@ -75,11 +75,11 @@ describe('HTTPTestsManagerTest', function() {
 
         this.sut.isAssertExceptionsEnabled = false;
         
-        await this.sut.assertUrlsFail(['https://www.google.com', 'https://www.github.com']).then((assertErrors) => {
+        await this.sut.assertUrlsFail(['https://www.google.com', 'https://www.github.com']).then((results) => {
             
-            expect(assertErrors.length).toBe(2);
-            expect(assertErrors[0]).toContain("URL expected to fail but was 200 ok: https://www.google.com");
-            expect(assertErrors[1]).toContain("URL expected to fail but was 200 ok: https://www.github.com");
+            expect(results.assertErrors.length).toBe(2);
+            expect(results.assertErrors[0]).toContain("URL expected to fail but was 200 ok: https://www.google.com");
+            expect(results.assertErrors[1]).toContain("URL expected to fail but was 200 ok: https://www.github.com");
         });
     });
     
@@ -89,10 +89,10 @@ describe('HTTPTestsManagerTest', function() {
         this.sut.isAssertExceptionsEnabled = false;
         this.sut.wildcards = { $host: 'www.google.com' };
         
-        await this.sut.assertUrlsFail(['https://$host']).then((assertErrors) => {
+        await this.sut.assertUrlsFail(['https://$host']).then((results) => {
             
-            expect(assertErrors.length).toBe(1);
-            expect(assertErrors[0]).toContain("URL expected to fail but was 200 ok: https://www.google.com");
+            expect(results.assertErrors.length).toBe(1);
+            expect(results.assertErrors[0]).toContain("URL expected to fail but was 200 ok: https://www.google.com");
         });
     });
     
@@ -101,11 +101,11 @@ describe('HTTPTestsManagerTest', function() {
 
         this.sut.isAssertExceptionsEnabled = false;
         
-        await this.sut.assertUrlsFail([{ url: "https://www.turboframework.org" }, { url: "https://www.google.com" }]).then((assertErrors) => {
+        await this.sut.assertUrlsFail([{ url: "https://www.turboframework.org" }, { url: "https://www.google.com" }]).then((results) => {
             
-            expect(assertErrors.length).toBe(2);
-            expect(assertErrors[0]).toContain("URL expected to fail but was 200 ok: https://www.turboframework.org");
-            expect(assertErrors[1]).toContain("URL expected to fail but was 200 ok: https://www.google.com");
+            expect(results.assertErrors.length).toBe(2);
+            expect(results.assertErrors[0]).toContain("URL expected to fail but was 200 ok: https://www.turboframework.org");
+            expect(results.assertErrors[1]).toContain("URL expected to fail but was 200 ok: https://www.google.com");
         });
     });
     
@@ -114,12 +114,12 @@ describe('HTTPTestsManagerTest', function() {
 
         this.sut.isAssertExceptionsEnabled = false;
         
-        await this.sut.assertUrlsFail([{ url: "https://www.turboframework.org" }, 'https://www.stackoverflow.com', { url: "https://www.google.com" }]).then((assertErrors) => {
+        await this.sut.assertUrlsFail([{ url: "https://www.turboframework.org" }, 'https://www.stackoverflow.com', { url: "https://www.google.com" }]).then((results) => {
             
-            expect(assertErrors.length).toBe(3);
-            expect(assertErrors[0]).toContain("URL expected to fail but was 200 ok: https://www.turboframework.org");
-            expect(assertErrors[1]).toContain("URL expected to fail but was 200 ok: https://www.stackoverflow.com");
-            expect(assertErrors[2]).toContain("URL expected to fail but was 200 ok: https://www.google.com");
+            expect(results.assertErrors.length).toBe(3);
+            expect(results.assertErrors[0]).toContain("URL expected to fail but was 200 ok: https://www.turboframework.org");
+            expect(results.assertErrors[1]).toContain("URL expected to fail but was 200 ok: https://www.stackoverflow.com");
+            expect(results.assertErrors[2]).toContain("URL expected to fail but was 200 ok: https://www.google.com");
         });
     });
     
@@ -136,10 +136,10 @@ describe('HTTPTestsManagerTest', function() {
             someinvalidProp: 'value'
         }];
         
-        await this.sut.assertUrlsFail(urls).then((assertErrors) => {
+        await this.sut.assertUrlsFail(urls).then((results) => {
             
-            expect(assertErrors.length).toBe(1);
-            expect(assertErrors[0]).toContain("Object has unexpected key: someinvalidProp");
+            expect(results.assertErrors.length).toBe(1);
+            expect(results.assertErrors[0]).toContain("Object has unexpected key: someinvalidProp");
         });
     });
     

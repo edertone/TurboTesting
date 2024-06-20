@@ -119,8 +119,9 @@ export class HTTPTestsManager {
 
         this.findDuplicateUrlValues(urls, 'HTTPTestsManager.assertUrlsFail duplicate urls:');
         
-        return new Promise ((resolve: (assertErrors?: string[]) => void) => {
+        return new Promise ((resolve: (results:any) => void) => {
             
+            let responses: string[] = [];
             let anyErrors: string[] = [];
             
             // Perform a recursive execution for all the provided urls
@@ -130,23 +131,28 @@ export class HTTPTestsManager {
                     
                     if(this.isAssertExceptionsEnabled && anyErrors.length > 0){
                         
-                        throw new Error(`HTTPTestsManager.assertUrlsFail failed with ${anyErrors.length} errors:\n` + anyErrors.join('\n'));
+                        throw new Error(`HTTPTestsManager.assertUrlsFail failed with ${anyErrors.length} errors:\n` +
+                            anyErrors.join('\n') + `\n\nLIST OF RESPONSES:\n` + responses.join('\n\n'));
                     }
-    
-                    return resolve(anyErrors);
+
+                    return resolve({responses: responses, assertErrors: anyErrors});
                 }
                 
                 let request = this.createRequestFromEntry(urls[index], anyErrors);
                 
                 request.errorCallback = (errorMsg: string, errorCode: number, response: string) => {
                 
+                    responses.push(response);
+                    
                     this.assertRequestContents(response, urls[index], anyErrors, String(errorCode), errorMsg);
                     
                     recursiveCaller(index + 1);
                 };
                 
-                request.successCallback = () => {
+                request.successCallback = (response: string) => {
                 
+                    responses.push(response);
+                    
                     anyErrors.push(`URL expected to fail but was 200 ok: ${request.url}`);
                 
                     recursiveCaller(index + 1);

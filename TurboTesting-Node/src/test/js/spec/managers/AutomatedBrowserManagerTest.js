@@ -577,10 +577,10 @@ describe('AutomatedBrowserManagerTest', function() {
         
         this.automatedBrowserManager.wildcards = {$projectRoot: projectRoot};
         
-        await this.automatedBrowserManager.assertUrlsFail(['https://github.com/edertone/TurboTesting/blob/master/README.md']).then((assertErrors) => {
+        await this.automatedBrowserManager.assertUrlsFail(['https://github.com/edertone/TurboTesting/blob/master/README.md']).then((result) => {
             
-            expect(assertErrors.length).toBe(1);
-            expect(assertErrors[0]).toMatch(/URL expected to fail but was 200 ok[\s\S]*github.com.edertone/);
+            expect(result.assertErrors.length).toBe(1);
+            expect(result.assertErrors[0]).toMatch(/URL expected to fail but was 200 ok[\s\S]*github.com.edertone/);
         });
     });
     
@@ -592,10 +592,10 @@ describe('AutomatedBrowserManagerTest', function() {
             $host: 'github.com'
         };
         
-        await this.automatedBrowserManager.assertUrlsFail(['https://$host/edertone/TurboTesting/blob/master/README.md']).then((assertErrors) => {
+        await this.automatedBrowserManager.assertUrlsFail(['https://$host/edertone/TurboTesting/blob/master/README.md']).then((result) => {
             
-            expect(assertErrors.length).toBe(1);
-            expect(assertErrors[0]).toMatch(/URL expected to fail but was 200 ok[\s\S]*github.com.edertone/);
+            expect(result.assertErrors.length).toBe(1);
+            expect(result.assertErrors[0]).toMatch(/URL expected to fail but was 200 ok[\s\S]*github.com.edertone/);
         });
     });
     
