@@ -73,18 +73,25 @@ export class TurboSiteTestsManager {
     
     
     /**
-     * Obtain the filesystem path to the root of the folder where the project has been published / synced. 
+     * Obtain the filesystem path to the root of the folder where the project has been synced / published.
      * 
      * @return The synced folder file system path
      */
-    getSyncDestPath(){
-    
+    getPathToPublishFolder(){
+        
+        let sep = this.filesManager.dirSep();
         let turboBuilderSetup = this.getSetup('turbobuilder');
         
-        if(!this.filesManager.isDirectory(turboBuilderSetup.sync.destPath + this.filesManager.dirSep() + 'site') ||
-           !this.filesManager.isFile(turboBuilderSetup.sync.destPath + this.filesManager.dirSep() + '.htaccess')){
+        if(!this.filesManager.isDirectory(turboBuilderSetup.sync.destPath + sep + 'site') ||
+           !this.filesManager.isFile(turboBuilderSetup.sync.destPath + sep + '.htaccess')){
             
-            throw new Error('Project has not been published / synced so syncDestPath does not contain a valid published site_php project');
+            // Return the site path inside the target folder if exists
+            if(this.filesManager.isDirectory(this.getTargetSitePath())){
+                
+                return StringUtils.getPath(this.getTargetSitePath());
+            }
+            
+            throw new Error('Could not find a valid path were the project is built and published');
         }
         
         return turboBuilderSetup.sync.destPath;    
@@ -105,6 +112,21 @@ export class TurboSiteTestsManager {
         return (turboBuilderSetup.metadata.name === '') ?
             StringUtils.getPathElement(this.path.resolve(this.projectRootPath)) :
             turboBuilderSetup.metadata.name;
+    }
+    
+    
+    /**
+     * Obtain the path to the site folder inside the target folder
+     * 
+     * @return The Full path
+     */
+    getTargetSitePath(){
+        
+        let sep = this.filesManager.dirSep();
+        let turboSiteSetup = this.getSetup('turbosite');
+        let baseUrlPath = (StringUtils.isEmpty(turboSiteSetup.baseURL) ? '' : (sep + turboSiteSetup.baseURL));
+
+        return this.getTargetPath() + sep + this.getProjectname() + sep + 'dist' + baseUrlPath + sep +'site';
     }
     
     
@@ -130,7 +152,7 @@ export class TurboSiteTestsManager {
         // The cache hash string is stored there
         let cacheHash = '';
         
-        let targetSitePath = this.getTargetPath() + dirSep + this.getProjectname() + dirSep + 'dist' + dirSep + 'site';
+        let targetSitePath = this.getTargetSitePath();
         
         if(this.filesManager.isDirectory(targetSitePath)){
         
