@@ -976,13 +976,13 @@ export class AutomatedBrowserManager {
      */
     assertExistXpath(xpaths:string|string[], exist: boolean){
         
-        let elemensFound: any[] = [];
+        let elementsFound: any[] = [];
         
         let recursiveCaller = (xpathsArray:string[], index: number) => {
             
             if(index >= xpathsArray.length){
                 
-                return elemensFound;
+                return elementsFound;
             }
             
             if(!exist){
@@ -1009,7 +1009,7 @@ export class AutomatedBrowserManager {
                 return this.driver.wait(this.webdriver.until.elementLocated(this.webdriver.By.xpath(xpathsArray[index])), this.waitTimeout)
                     .then((element:any) => {
                         
-                    elemensFound.push(element);
+                    elementsFound.push(element);
                         
                     return recursiveCaller(xpathsArray, index + 1);
                     
@@ -1048,13 +1048,49 @@ export class AutomatedBrowserManager {
      * @param elements A list with the name for the html elements that we are looking for
      * @param exist True if we expect the elements to exist, false otherwise
      *
-     * @return A promise. When resolved correctly, all the found instances will be passed to the .then() method
+     * @return A promise. When resolved correctly, the found instance will be passed to the .then() method
      */
     assertExistElement(elements:string|string[], exist: boolean){
         
         let elementsArray = ArrayUtils.isArray(elements) ? elements as string[] : [elements as string];
         
         return this.assertExistXpath(elementsArray.map(x => "//" + x), exist);
+    }
+    
+    
+    /**
+     * Search for the specified text on the input that has the specified id, or fail  
+     * 
+     * @param id The id for the html input element we are inspecting
+     * @param text A text that must be contained by the input value.
+     *
+     * @return A promise. If resolves correctly, assertion will have passed ok.
+     */
+    assertExistsTextOnInput(id:string, text:string, exactMatch:boolean){
+        
+        return this.assertExistId(id, true).then(() => {
+            
+            return this.driver.findElement(this.webdriver.By.xpath("//*[@id='" + id + "']"))
+                        .then((element: any) => element.getAttribute('value'))
+                        .then((value: string) => {
+                            
+                            if(exactMatch){
+                                
+                                if(text !== value){
+                                
+                                    throw new Error(`Expected input with the id ${id} to have the text "${text}" but was "${value}"`);
+                                }
+                                
+                            }else if(text.indexOf(value) === -1){
+                                                    
+                                throw new Error(`Expected input with the id ${id} to contain the text "${text}" but was "${value}"`);
+                            }
+                            
+                        }).catch((e:Error) => {
+                            
+                            throw new Error(`Error on input id: ${id}\n` + e.toString());
+                        });
+        });
     }
     
     
