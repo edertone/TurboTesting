@@ -74,78 +74,78 @@ export class AutomatedBrowserManager {
     /**
      * The StringTestsManager instance used to perform string tests
      */
-    private stringTestsManager: StringTestsManager = new StringTestsManager();
+    private readonly stringTestsManager: StringTestsManager = new StringTestsManager();
     
     
     /**
      * The ObjectTestsManager instance used to perform object tests
      */
-    private objectTestsManager: ObjectTestsManager = new ObjectTestsManager();
+    private readonly objectTestsManager: ObjectTestsManager = new ObjectTestsManager();
     
     
     /**
      * The HTTPManager instance used to perform http requests
      */
-    private httpManager: HTTPManager = new HTTPManager();
+    private readonly httpManager: HTTPManager = new HTTPManager();
     
     
     /**
      * The httpTestsManager instance used to perform http request tests
      */
-    private httpTestsManager: HTTPTestsManager = new HTTPTestsManager();
+    private readonly httpTestsManager: HTTPTestsManager = new HTTPTestsManager();
     
     
     /**
      * A files manager instance used by this class
      */
-    private filesManager: FilesManager = new FilesManager();
+    private readonly filesManager: FilesManager = new FilesManager();
     
     
     /**
      * Stores the NodeJs fs instance
      */
-    private nodeFs: any;
+    private readonly nodeFs: any;
     
     
     /**
      * Stores the NodeJs url instance
      */
-    private nodeUrl: any;
+    private readonly nodeUrl: any;
     
     /**
      * Stores the NodeJs execSync instance
      */
-    private nodeExecSync: any;
+    private readonly nodeExecSync: any;
     
     
     /**
      * Stores the NodeJs pngjs chrome instance
      */
-    private nodePNG: any = null;
+    private readonly nodePNG: any = null;
     
     
     /**
      * Stores the NodeJs pixelmatch chrome instance
      */
-    private nodePixelmatch: any = null;
+    private readonly nodePixelmatch: any = null;
     
     
     /**
      * Stores the NodeJs node-canvas chrome instance
      */
-    private nodeCanvas: any = null;
+    private readonly nodeCanvas: any = null;
     
     
     /**
      * Stores the NodeJs webdriver instance
      */
-    private webdriver: any;
+    private readonly webdriver: any;
     
     
     /**
      * Stores the NodeJs opn instance
      */
-    private opn: any;
+    private readonly opn: any;
     
     
     /**
@@ -252,8 +252,8 @@ export class AutomatedBrowserManager {
     /**
      * Specify the viewport (internal browser document area) size and the main browser window position. This method can be called at any time
      *
-     * @param width The desired browser viewport width. (Note this is the internal area where the website is displayed)
-     * @param height The desired browser viewport height. (Note this is the internal area where the website is displayed)
+     * @param width The desired browser viewport width. (Notice this is the internal area where the website is displayed)
+     * @param height The desired browser viewport height. (Notice this is the internal area where the website is displayed)
      * @param x The desired browser left corner position
      * @param y The desired browser top corner position
      *
@@ -280,25 +280,25 @@ export class AutomatedBrowserManager {
     
         return this.driver.executeScript(`return [window.outerWidth - window.innerWidth + ${width}, window.outerHeight - window.innerHeight + ${height}];`)
             .then((viewportSize: any) =>{
-        
+            
             return this.driver.manage().window().setRect({width: viewportSize[0], height: viewportSize[1], x: x, y: y}).then(() =>{
                 
                 // We must wait till the browser window is correctly resized before letting the execution continue
                 return this.waitTillJavaScriptCondition(`window.innerWidth === ${width} && window.innerHeight === ${height}`, 3000).then().catch((e:Error) => {
-                    
+
                     if(attempts > 0){
-                            
+
                         return this._setBrowserSizeAndPositionAux(width, height, x, y, attempts - 1);
                         
                     }else{
                         
                         return this.driver.executeScript('return window.innerWidth + "x" + window.innerHeight').then((realSize:string) =>{
-                     
+                        
                             throw new Error(`Error trying to set browser viewport size to: ${width}x${height} (it was ${realSize})\n` + e.toString());    
-                        });
-                    }
+                            });
+                        }
+                    });
                 });
-            });
         });
     }
     
