@@ -1388,16 +1388,18 @@ export class AutomatedBrowserManager {
      * 
      * @param text A single string with the text for the element which we want to click or a list of texts that will be sequentially clicked
      *        one after the other. Any failure trying to click any of the provided ids will throw an exception
+     * @param elementType If we want to search text only on a specific type of element we can set it here. For example a, p, etc.. Or we can leave this value
+     *        to the defalut * value which means all possible elements containing text
      *
      * @return A promise which will end correctly if the process finishes ok or fail with exception otherwise.
      */
-    clickByText(text:string|string[]){
+    clickByText(text:string|string[], elementType = '*'){
         
         let texts = ArrayUtils.isArray(text) ? text as string[] : [text as string];
         
         for(let i = 0; i < texts.length; i++){
             
-            texts[i] = "//*[text()[contains(., '" + texts[i] + "')]]";
+            texts[i] = "//" + elementType + "[contains(text(), '" + texts[i] + "')]";
         }
         
         return this.clickByXpath(texts);
