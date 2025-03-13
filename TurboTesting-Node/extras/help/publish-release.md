@@ -1,6 +1,6 @@
 # How to make the library available to the public:
 
-1 - Update project dependencies by following instructions on upgrade-dependencies.md
+1 - Update project dependencies by following instructions on dependencies-upgrade.md
 
 2 - Make sure all tests pass
 

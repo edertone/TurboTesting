@@ -39,7 +39,7 @@ export class AutomatedBrowserManager {
      * for a small amount of time. This will improve automation by making it more similar to a human interaction, but will also
      * make all interactions a bit slower. It can be modified to taste
      */
-    humanInteractionTime = 1300;
+    humanInteractionTime = 900;
     
     
     /**
@@ -1425,16 +1425,55 @@ export class AutomatedBrowserManager {
                 return;
             }
             
-            return this._clickByXpathAux(xpathsArray[index], 5).then(() => {
-                
-                return this.waitMilliseconds(xpathsArray.length <= 0 ? 0 : this.humanInteractionTime).then(() => {
+            return this.waitMilliseconds(this.humanInteractionTime / 2).then(() => {
+            
+                return this._clickByXpathAux(xpathsArray[index], 5).then(() => {
                     
-                    return recursiveCaller(index + 1);
+                    return this.waitMilliseconds(this.humanInteractionTime / 2).then(() => {
+                        
+                        return recursiveCaller(index + 1);
+                    });
                 });
-            });      
+            });
         }
         
         return recursiveCaller(0);   
+    }
+    
+    
+    /**
+     * Click on the browser back button to go to the previous page
+     * humanInteractionTime miliseconds will be waited before the back action is performed
+     * 
+     * @return A promise which will end correctly if the process finishes ok or fail with exception otherwise.
+     */
+    clickBrowserBackButton(){
+    
+        return this.waitMilliseconds(this.humanInteractionTime / 2).then(() => {
+                            
+            return this.driver.navigate().back().then(() => {
+                                        
+                return this.waitMilliseconds(this.humanInteractionTime / 2);
+            });
+        });
+    }
+    
+
+    /**
+     * Click on the browser forward button to go to the next page
+     * humanInteractionTime miliseconds will be waited before the back action is performed
+     * 
+     * @return A promise which will end correctly if the process finishes ok or fail with exception otherwise.
+     */
+    clickBrowserForwardButton(){
+
+        return this.waitMilliseconds(this.humanInteractionTime / 2).then(() => {
+                                    
+            return this.driver.navigate().forward().then(() => {
+                                        
+                return this.waitMilliseconds(this.humanInteractionTime / 2);
+            });
+        });
     }
     
     
@@ -1542,8 +1581,14 @@ export class AutomatedBrowserManager {
         
         return this.driver.wait(this.webdriver.until.elementLocated(this.webdriver.By.xpath(xpath)), this.waitTimeout)
             .then((element: any) => {
-            
-            return element.sendKeys(text);
+        
+            return this.waitMilliseconds(this.humanInteractionTime / 2).then(() => {
+                        
+                return element.sendKeys(text).then(() => {
+                    
+                    return this.waitMilliseconds(this.humanInteractionTime / 2);
+                });
+            });
         
         }).catch((e:Error) => {
             
