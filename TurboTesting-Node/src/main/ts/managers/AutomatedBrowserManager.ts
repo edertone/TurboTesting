@@ -1136,6 +1136,23 @@ export class AutomatedBrowserManager {
     
     
     /**
+     * Wait till the element which are defined by the provided ids are found, visible and enabled (ready to be clicked), or fail after 
+     * the timeout has passed (globally defined by the waitTimeout property)
+     * 
+     * @param ids A list with the ids for the html elements that we are looking for
+     * @param clickable True if we expect the elements to be clickable, false otherwise
+     *
+     * @return A promise. When resolved correctly, all the found instances will be passed the .then() method
+     */
+    assertClickableId(ids:string|string[], clickable: boolean){
+        
+        ids = ArrayUtils.isArray(ids) ? ids as string[] : [ids as string];
+        
+        return this.assertClickableXpath(ids.map(x => "//*[@id='" + x + "']"), clickable);
+    }
+    
+    
+    /**
      * Wait till the element which are defined by the provided xpath expression are found, visible and enabled (ready to be clicked), or fail after 
      * the timeout has passed (globally defined by the waitTimeout property)
      * 
