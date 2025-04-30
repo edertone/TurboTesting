@@ -1063,6 +1063,8 @@ export class AutomatedBrowserManager {
      * 
      * @param id The id for the html input element we are inspecting
      * @param text A text that must be contained by the input value.
+     * @param exactMatch True if we want to check that the input value is exactly the same as the provided text, false if we 
+     *        want to check that the input value contains the provided text
      *
      * @return A promise. If resolves correctly, assertion will have passed ok.
      */
@@ -1091,6 +1093,26 @@ export class AutomatedBrowserManager {
                             throw new Error(`Error on input id: ${id}\n` + e.toString());
                         });
         });
+    }
+    
+    
+    /**
+     * Search for the specified text on all the elements of the specified type, or fail
+     * 
+     * @param elementType The name for the html elements that we are looking for. For example: "a", "div", "span", etc.
+     * @param text A text that must be contained by the element
+     * @param exactMatch True if we want to check that the input value is exactly the same as the provided text, false if we 
+     *        want to check that the input value contains the provided text
+     *
+     * @return A promise. If resolves correctly, assertion will have passed ok.
+     */
+    assertExistsTextOnElement(elementType:string, text:string, exactMatch:boolean){
+    
+        const xpath = exactMatch ? 
+               `//${elementType}[text()='${text}']` : 
+               `//${elementType}[contains(text(), '${text}')]`;
+               
+        return this.assertExistXpath(xpath, true);
     }
     
     
