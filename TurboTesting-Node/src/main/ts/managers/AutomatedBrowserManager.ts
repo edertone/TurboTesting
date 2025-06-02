@@ -1065,12 +1065,13 @@ export class AutomatedBrowserManager {
      * @param text A text that must be contained by the input value.
      * @param exactMatch True if we want to check that the input value is exactly the same as the provided text, false if we 
      *        want to check that the input value contains the provided text
+     * @param exist True if we expect the elements to exist, false otherwise
      *
      * @return A promise. If resolves correctly, assertion will have passed ok.
      */
-    assertExistsTextOnInput(id:string, text:string, exactMatch:boolean){
+    assertExistsTextOnInput(id:string, text:string, exactMatch:boolean, exist:boolean){
         
-        return this.assertExistId(id, true).then(() => {
+        return this.assertExistId(id, exist).then(() => {
             
             return this.driver.findElement(this.webdriver.By.xpath("//*[@id='" + id + "']"))
                         .then((element: any) => element.getAttribute('value'))
@@ -1103,16 +1104,17 @@ export class AutomatedBrowserManager {
      * @param text A text that must be contained by the element
      * @param exactMatch True if we want to check that the input value is exactly the same as the provided text, false if we 
      *        want to check that the input value contains the provided text
+     * @param exist True if we expect the elements to exist, false otherwise
      *
      * @return A promise. If resolves correctly, assertion will have passed ok.
      */
-    assertExistsTextOnElement(elementType:string, text:string, exactMatch:boolean){
+    assertExistsTextOnElement(elementType:string, text:string, exactMatch:boolean, exist:boolean){
     
         const xpath = exactMatch ? 
                `//${elementType}[text()='${text}']` : 
                `//${elementType}[contains(text(), '${text}')]`;
                
-        return this.assertExistXpath(xpath, true);
+        return this.assertExistXpath(xpath, exist);
     }
     
     
